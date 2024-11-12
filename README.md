@@ -4,24 +4,39 @@ Abstraction for Enbio WiFi Sterilizer Modbus registers
 
 ## Usage
 
-Install 
+### 1. Download the Repository
+```shell
+git clone https://github.com/Gieneq/EnbioWiFiMachine.git
+cd EnbioWiFiMachine
+```
+
+### 2. Create a Virtual Environment
+```shell
+python3 venv venv
+venv\Scripts\Activate
+```
+If you encounter issues with script execution, set the PowerShell execution policy:
+```shell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+```
+
+### 3. Install
+To install the package in editable mode:
 ```shell
 pip install -e .
 ```
 
-Run CLI:
+### 4. Check Installation
+Verify the installation by running the CLI tool’s help command:
 ```shell
 enbio_wifi_machine --help
 ```
 
-
-download todo
-
-install todo
-
-module todo
-
 ## CLI
+
+Todo
+
+## Module
 
 Todo
 
