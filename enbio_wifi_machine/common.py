@@ -59,6 +59,10 @@ class ProcessType(Enum):
     THELIX = 6
 
 
+class ScreenId(Enum):
+    MAIN = 0
+
+
 process_labels = ["121", "134", "134f", "prion", "tvac", "thelix"]
 
 

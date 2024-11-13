@@ -83,3 +83,5 @@ class ModbusRegister(Enum):
     PWR_SG_DRV_MONITOR = 3505
 
     VALVES_AND_RELAYS = 3503
+
+    CHANGE_SCREEN = 3550

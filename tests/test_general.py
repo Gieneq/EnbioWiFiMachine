@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 import pytest
 import re
 from enbio_wifi_machine.machine import EnbioWiFiMachine
-from enbio_wifi_machine.common import EnbioDeviceInternalException, await_value, float_to_ints, ints_to_float
+from enbio_wifi_machine.common import EnbioDeviceInternalException, await_value, float_to_ints, ints_to_float, \
+    ProcessType, ScreenId
 
 epsilon = 1e-4
 minimal_reboot_time_sec = 11
@@ -54,12 +55,12 @@ def test_enbio_device_set_devid(enbio_wifi_machine):
 
 def test_enbio_device_await_door_open(enbio_wifi_machine):
     print("Please open door")
-    assert await_value(enbio_wifi_machine.is_door_open, True, 5)
+    assert await_value(enbio_wifi_machine.is_door_open, True, 60)
 
 
 def test_enbio_device_await_door_close(enbio_wifi_machine):
     print("Please close door")
-    assert await_value(enbio_wifi_machine.is_door_open, False, 5)
+    assert await_value(enbio_wifi_machine.is_door_open, False, 60)
 
 
 def test_enbio_device_check_lock_drv(enbio_wifi_machine):
@@ -181,18 +182,34 @@ def test_enbio_device_fans_cooling(enbio_wifi_machine):
     assert enbio_wifi_machine.get_standby_cooling_thrsh_tmpr() == thrsh_tpr
 
 
-def test_enbio_device_process_counter(enbio_wifi_machine):
-    proc_cnter = enbio_wifi_machine.get_process_counter()
-    print(f"Got process counter {proc_cnter}")
-    assert proc_cnter >= 0
-
-
 def test_enbio_device_clear_process_counter(enbio_wifi_machine):
     enbio_wifi_machine.clear_process_counter()
 
     proc_cnter = enbio_wifi_machine.get_process_counter()
     print(f"Got process counter {proc_cnter}")
-    assert proc_cnter >= 0
+    assert proc_cnter == 0
+
+
+def test_enbio_device_start_check_recent_screen(enbio_wifi_machine):
+    assert enbio_wifi_machine.get_recent_screen() == ScreenId.MAIN
+
+
+def test_enbio_device_start_interrupt_process(enbio_wifi_machine):
+    process_duration_seconds = 12
+
+    processes_counter_before = enbio_wifi_machine.get_process_counter()
+
+    enbio_wifi_machine.start_process(ProcessType.P121)
+    processes_counter_after = enbio_wifi_machine.get_process_counter()
+    time.sleep(process_duration_seconds)
+
+    enbio_wifi_machine.interrupt_process()
+    print(f"Process counter before: {processes_counter_before}, after: {processes_counter_after}")
+
+    assert processes_counter_after == processes_counter_before + 1
+
+    # Delay some time to let device release lock
+    time.sleep(1)
 
 
 def test_enbio_device_saving():

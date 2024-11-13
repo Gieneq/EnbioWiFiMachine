@@ -95,7 +95,7 @@ Starting from register address 3400 there are new registers.
 | `DOOR_OPEN`                  | 1528u    | ✅ Coherent  | R/- | y      | Door open = signal is High on pin. Read 0xFFFF error.                                                |
 | `COIL_CONTROL`               | 40u      | ✅ Coherent  | R/W | y      | Write 0: not driven, 1: drive to unlock, 2: drive to lock. Read previously set value or 0xFFFF error |
 | `BOARD_NUM`                  | 512u     | ❓ Reclaimed | R/W | y      | Pattern of bit fields: rev.yy.mm, <5:'A'-'Z'>.<7:0-99>.<4:0-12>  example E.24.06                     |
-| `PROC_SELECT_START`          | 95u      | ✅ Coherent  | R/W |        | 2 Phase: write process_id, then write 1 to start. Read 0xFFFF error                                  |
+| `PROC_SELECT_START`          | 95u      | ✅ Coherent  | R/W | y      | 2 Phase: write process_id, then write 1 to start. Read 0xFFFF error                                  |
 | `EXECUTION_COUNTER`          | 65u      | ✅ Coherent  | R/W | y      | Read done processes/test count. Write 0 clears logs and resets counter.                              |
 | `SERVICE_COUNTER`            | 64u      | ✅ Coherent  | -/- |        | TODO                                                                                                 |
 | `HEPA_FILTER_COUNTER`        | 62u      | ✅ Coherent  | -/- |        | TODO                                                                                                 |
@@ -151,7 +151,7 @@ Starting from register address 3400 there are new registers.
 | `PWR_SG_TARGET`              | 0        | ?           | -/- |        | xxxx                                                                                                 |
 | `PWR_SG_DRV_MONITOR`         | 0        | ?           | -/- |        | xxxx                                                                                                 |
 | `VALVES_AND_RELAYS`          | 0        | ?           | -/- |        | xxxx                                                                                                 |
-| `xx`                         | 0        | ?           | -/- |        | xxxx                                                                                                 |
+| `CHANGE_SCREEN`              | 3550     | ❌ New       | R/W | y      | Change screenn, not all transitions supported                                                        |
 | `xx`                         | 0        | ?           | -/- |        | xxxx                                                                                                 |
 | `xx`                         | 0        | ?           | -/- |        | xxxx                                                                                                 |
 | `xx`                         | 0        | ?           | -/- |        | xxxx                                                                                                 |
@@ -198,4 +198,4 @@ Starting from register address 3400 there are new registers.
 ## TODOs
 
 Places worth extra attention:
--[ ] Clearing execution processes counter
+- [ ] Clearing execution processes counter

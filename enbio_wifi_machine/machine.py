@@ -3,8 +3,9 @@ import struct
 import minimalmodbus
 import serial.tools.list_ports
 from datetime import datetime
-from .proc_runner import ProcRunner
-from .common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, float_to_ints, ints_to_float, cfg
+# from .proc_runner import ProcRunner
+from .common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, float_to_ints, \
+    ints_to_float, cfg, process_type_values, ScreenId
 from .modbus_registers import ModbusRegister
 
 
@@ -258,29 +259,100 @@ class EnbioWiFiMachine:
         except Exception:
             pass
 
-    def runmonitor(self, proces_name: str) -> None:
-        proc_runner = ProcRunner(self._device)
-        proc_runner.start(label_to_process_type.get(proces_name))
+    def start_process(self, process_type: ProcessType) -> None:
+        print(f"start screen {self._device.read_register(ModbusRegister.CHANGE_SCREEN.value)}")
 
+        if self._device.read_register(ModbusRegister.PROC_STATUS.value) == 1:
+            raise EnbioDeviceInternalException("Process already running")
+
+        print(f"Starting Process Type: {process_type}")
+
+        self._device.write_register(ModbusRegister.PROC_SELECT_START.value, process_type_values[process_type])
+        time.sleep(0.5)
+
+        self._write_ctrl_reg_feedback(ModbusRegister.PROC_SELECT_START.value)
+
+    def get_recent_screen(self) -> ScreenId:
+        raw_value = self._device.read_register(ModbusRegister.PROC_STATUS.value)
+        print(f"Recent screen raw value: {raw_value}")
         try:
-            while True:
-                time.sleep(1)
-                print(proc_runner.poll_progress())
-        except KeyboardInterrupt as e:
-            print("Interrupting...")
-            proc_runner.interrupt()
-            raise e
+            # Attempt to map the raw value to a ScreenId enum
+            return ScreenId(raw_value)
+        except ValueError:
+            # Handle case where raw_value does not match any ScreenId
+            raise ValueError(f"Cannot convert {raw_value} to ScreenId enum")
+
+    # def _await_change_screen_to(self, next_screen: ScreenId):
+    def interrupt_process(self) -> None:
+        if self._device.read_register(ModbusRegister.PROC_STATUS.value) == 1:
+            print("interrupt")
+            self._device.write_register(ModbusRegister.PROC_SELECT_START.value, 0xFFFF)
+            time.sleep(3)
+
+            self._device.write_register(ModbusRegister.CHANGE_SCREEN.value, ScreenId.MAIN.value)
+            for _ in range(0, 50):
+                print(f"screen {self._device.read_register(ModbusRegister.CHANGE_SCREEN.value)}")
+                time.sleep(0.5)
+            # self._write_reg_feedback(ModbusRegister.CHANGE_SCREEN.value, ScreenId.MAIN.value, await_time=1)
+
+    def poll_process_line(self) -> ProcessLine:
+        valves_and_relays = self._device.read_register(ModbusRegister.VALVES_AND_RELAYS.value)
+
+        return ProcessLine(
+            sec=self._device.read_register(ModbusRegister.PROC_SECONDS.value),
+            phase=self._device.read_register(ModbusRegister.PROC_PHASE.value),
+
+            ptrn=self._device.read_register(ModbusRegister.PWR_CTRL_PATTERN.value),
+            ch_pwr=self._device.read_register(ModbusRegister.PWR_CH_DRV_MONITOR.value),
+            ch_tar=self._device.read_register(ModbusRegister.PWR_CH_TARGET.value),
+            sg_pwr=self._device.read_register(ModbusRegister.PWR_SG_CTRL.value),
+            sg_tar=self._device.read_register(ModbusRegister.PWR_SG_DRV_MONITOR.value),
+
+            p_proc=round(self._read_float_register(ModbusRegister.PRESSURE_PROCESS.value), 3),
+            t_proc=round(self._read_float_register(ModbusRegister.TEMPERATURE_PROCESS.value), 3),
+            t_chmbr=round(self._read_float_register(ModbusRegister.TEMPERATURE_CHAMBER.value), 3),
+            t_stmgn=round(self._read_float_register(ModbusRegister.TEMPERATURE_STEAMGEN.value), 3),
+
+            v1=valves_and_relays & (1 << 0) > 0,
+            v2=valves_and_relays & (1 << 1) > 0,
+            v3=valves_and_relays & (1 << 2) > 0,
+            v5=valves_and_relays & (1 << 3) > 0,
+
+            pvac=valves_and_relays & (1 << 4) > 0,
+            pwtr=valves_and_relays & (1 << 5) > 0,
+
+            ch_ab=valves_and_relays & (1 << 6) > 0,
+            sg_a=valves_and_relays & (1 << 7) > 0,
+            sg_b=valves_and_relays & (1 << 8) > 0,
+            sg_c=valves_and_relays & (1 << 9) > 0,
+        )
+
+    def runmonitor(self, proces_name: str) -> None:
+        pass
+        # proc_runner = ProcRunner(self._device)
+        # proc_runner.start(label_to_process_type.get(proces_name))
+        #
+        # try:
+        #     while True:
+        #         time.sleep(1)
+        #         print(proc_runner.poll_progress())
+        # except KeyboardInterrupt as e:
+        #     print("Interrupting...")
+        #     proc_runner.interrupt()
+        #     raise e
 
     def monitor(self) -> None:
-        proc_runner = ProcRunner(self._device)
+        pass
+        # proc_runner = ProcRunner(self._device)
+        #
+        # try:
+        #     while True:
+        #         time.sleep(1)
+        #         print(proc_runner.poll_progress())
+        # except KeyboardInterrupt as e:
+        #     print("Stopping...")
+        #     raise e
 
-        try:
-            while True:
-                time.sleep(1)
-                print(proc_runner.poll_progress())
-        except KeyboardInterrupt as e:
-            print("Stopping...")
-            raise e
 
     def get_phase_id(self) -> int:
         return self._device.read_register(ModbusRegister.PROC_PHASE.value)
