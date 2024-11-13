@@ -3,7 +3,10 @@ from datetime import datetime, timedelta
 import pytest
 import re
 from enbio_wifi_machine.machine import EnbioWiFiMachine
-from enbio_wifi_machine.common import EnbioDeviceInternalException, await_value
+from enbio_wifi_machine.common import EnbioDeviceInternalException, await_value, float_to_ints, ints_to_float
+
+epsilon = 1e-4
+minimal_reboot_time_sec = 11
 
 
 @pytest.fixture
@@ -15,6 +18,25 @@ def enbio_wifi_machine():
 
     # Teardown
     device.set_standby_cooling_thrsh_tmpr(70)
+
+
+def test_int_saving(enbio_wifi_machine):
+    val = 125
+    enbio_wifi_machine.set_test_int(val)
+    assert val == enbio_wifi_machine.get_test_int()
+
+
+def test_float_conversion():
+    float_value = 107.33
+    low, high = float_to_ints(float_value)
+    actual_float = ints_to_float(low, high)
+    assert abs(float_value - actual_float) < epsilon
+
+
+def test_float_saving(enbio_wifi_machine):
+    val = 103.71
+    enbio_wifi_machine.set_test_float(val)
+    assert abs(val - enbio_wifi_machine.get_test_float()) < epsilon
 
 
 def test_enbio_device_set_devid(enbio_wifi_machine):
@@ -96,6 +118,28 @@ def test_enbio_device_datetime_driff(enbio_wifi_machine):
     assert actual_seconds_passed != seconds_to_wait
 
 
+def test_enbio_device_datetime_saving_reboot():
+    # Do not use fixture!
+    machine = EnbioWiFiMachine()
+    seconds_to_wait = float(2 * minimal_reboot_time_sec)
+
+    time_to_set = datetime.now().replace(second=0, microsecond=0)
+    machine.set_datetime(time_to_set)
+
+    # Reboot and sleep
+    time_to_add = timedelta(seconds=seconds_to_wait)
+    machine.reboot()
+    time.sleep(seconds_to_wait)
+
+    # Recreate machine
+    machine = EnbioWiFiMachine()
+    new_datetime_target = time_to_set + time_to_add
+    new_datetime_obtained = machine.get_datetime()
+
+    actual_seconds_passed = (new_datetime_obtained - new_datetime_target).total_seconds()
+    print(f"Time diff between set and get: {actual_seconds_passed}")
+    assert actual_seconds_passed != seconds_to_wait
+
 def test_enbio_device_firmware_version(enbio_wifi_machine):
     pattern = r"^\d+\.\d+\.\d+$"
     firmware_version = enbio_wifi_machine.get_firmware_version()
@@ -138,7 +182,17 @@ def test_enbio_device_fans_cooling(enbio_wifi_machine):
 
 
 def test_enbio_device_process_counter(enbio_wifi_machine):
-    assert enbio_wifi_machine.get_process_counter() >= 0
+    proc_cnter = enbio_wifi_machine.get_process_counter()
+    print(f"Got process counter {proc_cnter}")
+    assert proc_cnter >= 0
+
+
+def test_enbio_device_clear_process_counter(enbio_wifi_machine):
+    enbio_wifi_machine.clear_process_counter()
+
+    proc_cnter = enbio_wifi_machine.get_process_counter()
+    print(f"Got process counter {proc_cnter}")
+    assert proc_cnter >= 0
 
 
 def test_enbio_device_saving():
@@ -168,9 +222,3 @@ def test_enbio_device_lock_frequent(enbio_wifi_machine):
 
         enbio_wifi_machine.door_unlock_with_feedback(timeout=0.5)
         assert enbio_wifi_machine.is_door_unlocked()
-
-
-def test_int_saving(enbio_wifi_machine):
-    val = 125
-    enbio_wifi_machine.set_test_int(val)
-    assert val == enbio_wifi_machine.get_test_int()

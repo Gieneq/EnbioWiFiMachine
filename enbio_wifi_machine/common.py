@@ -4,6 +4,27 @@ import struct
 import minimalmodbus
 from dataclasses import dataclass
 
+cfg = {
+    "serial_timeout": 2.5,
+    "serial_port": 115200,
+}
+
+
+def ints_to_float(low, high):
+    """Convert a tuple of two 16-bit integers to a float."""
+    int_value = (high << 16) | low
+    packed_value = struct.pack(">I", int_value)  # ">I" for big-endian 32-bit unsigned integer
+    return struct.unpack(">f", packed_value)[0]  # ">f" for big-endian 32-bit float
+
+
+def float_to_ints(float_value):
+    """Convert a float to a tuple of two 16-bit integers."""
+    packed_value = struct.pack(">f", float_value)  # ">f" for big-endian 32-bit float
+    int_value = struct.unpack(">I", packed_value)[0]  # ">I" for big-endian 32-bit unsigned integer
+    high = (int_value >> 16) & 0xFFFF
+    low = int_value & 0xFFFF
+    return low, high
+
 
 def await_value(function, value, timeout: [float | None] = None) -> bool:
     start_time = time.time()

@@ -1,9 +1,10 @@
 import time
+import struct
 import minimalmodbus
 import serial.tools.list_ports
 from datetime import datetime
 from .proc_runner import ProcRunner
-from .common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException
+from .common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, float_to_ints, ints_to_float, cfg
 from .modbus_registers import ModbusRegister
 
 
@@ -22,11 +23,20 @@ class EnbioWiFiMachine:
             raise EnbioDeviceInternalException("Modbus device not found on any available port.")
 
         self._device = minimalmodbus.Instrument(port, address, close_port_after_each_call=True, debug=False)
-        self._device.serial.baudrate = 115200
+        self._device.serial.baudrate = cfg["serial_port"]
         self._device.serial.bytesize = 8
         self._device.serial.stopbits = 1
         self._device.serial.parity = minimalmodbus.serial.PARITY_EVEN
-        self._device.serial.timeout = 0.5
+        self._device.serial.timeout = cfg["serial_timeout"]
+
+    def _read_float_register(self, register):
+        low, high = self._device.read_registers(register, 2)
+        return ints_to_float(low, high)
+
+    def _write_float_register(self, register, float_value):
+        low, high = float_to_ints(float_value)
+        self._device.write_register(register, low)
+        self._device.write_register(register + 1, high)
 
     def _write_reg_feedback(self, register, value, await_time: float = 0.1):
         """ Writes register and read value back to ensure """
@@ -71,14 +81,14 @@ class EnbioWiFiMachine:
             try:
                 # Try to initialize the Modbus device on this port
                 tmp_device = minimalmodbus.Instrument(port.device, address, close_port_after_each_call=True, debug=False)
-                tmp_device.serial.baudrate = 115200
+                tmp_device.serial.baudrate = cfg["serial_port"]
                 tmp_device.serial.bytesize = 8
                 tmp_device.serial.stopbits = 1
                 tmp_device.serial.parity = minimalmodbus.serial.PARITY_EVEN
-                tmp_device.serial.timeout = 0.5
+                tmp_device.serial.timeout = cfg["serial_timeout"]
 
-                response = tmp_device.read_register(ModbusRegister.FIRMWARE_VERSION.value)
-                print(f"Device found on port {port.device} with device id: {response}")
+                response_device_id = self._get_device_id(tmp_device)
+                print(f"Device found on port {port.device} with device id: {response_device_id}")
                 return port.device  # Return the detected port if communication is successful
 
             except (minimalmodbus.NoResponseError, minimalmodbus.SlaveReportedException, IOError):
@@ -88,7 +98,7 @@ class EnbioWiFiMachine:
         # Return None if no valid Modbus device is found on any port
         return None
 
-    def _drv_coil_until(self, direction_func, stop_condition_func, timeout: int | None = None,
+    def _drv_coil_until(self, direction_func, stop_condition_func, timeout: float | None = None,
                         action_name: str = "move") -> None:
         """Move the door in a specified direction until a condition is met, with feedback and optional timeout."""
         start_time = time.time()
@@ -123,10 +133,14 @@ class EnbioWiFiMachine:
         self._device.write_string(ModbusRegister.DEVICE_ID.value, padded_dev_id, self.device_id_max_length)
         print(f"Device ID set to: {dev_id}")
 
+    @classmethod
+    def _get_device_id(cls, device: minimalmodbus.Instrument):
+        dev_id = device.read_string(ModbusRegister.DEVICE_ID.value, cls.device_id_max_length)
+        return dev_id.rstrip('\0')
+
     def get_device_id(self) -> str:
         try:
-            dev_id = self._device.read_string(ModbusRegister.DEVICE_ID.value, self.device_id_max_length)
-            return dev_id.rstrip('\0')
+            return self._get_device_id(self._device)
         except IOError:
             print("Failed to read device ID.")
             return ""
@@ -146,7 +160,7 @@ class EnbioWiFiMachine:
     def door_drv_none(self) -> None:
         self._write_reg_feedback(ModbusRegister.COIL_CONTROL.value, 0, await_time=0.001)
 
-    def door_lock_with_feedback(self, timeout: int | None = None) -> None:
+    def door_lock_with_feedback(self, timeout: float | None = None) -> None:
         """Drive forward until the door is locked."""
         self._drv_coil_until(
             direction_func=self.door_drv_fwd,
@@ -155,7 +169,7 @@ class EnbioWiFiMachine:
             action_name="lock"
         )
 
-    def door_unlock_with_feedback(self, timeout: int | None = None) -> None:
+    def door_unlock_with_feedback(self, timeout: float | None = None) -> None:
         """Drive backward until the door is unlocked."""
         self._drv_coil_until(
             direction_func=self.door_drv_bwd,
@@ -169,6 +183,12 @@ class EnbioWiFiMachine:
 
     def set_test_int(self, new_value: int):
         self._device.write_register(ModbusRegister.TEST_INT.value, new_value)
+
+    def get_test_float(self) -> float:
+        return self._read_float_register(ModbusRegister.TEST_FLOAT.value)
+
+    def set_test_float(self, new_value: float):
+        self._write_float_register(ModbusRegister.TEST_FLOAT.value, new_value)
 
     def get_firmware_version(self) -> str:
         firmware_value = self._device.read_register(ModbusRegister.FIRMWARE_VERSION.value)
@@ -191,24 +211,25 @@ class EnbioWiFiMachine:
         self._device.write_register(ModbusRegister.BOARD_NUM.value, new_boardnum)
 
     def get_datetime(self) -> datetime:
+        # Note: can also use get/set variant
         return datetime(
-            year=self._device.read_register(ModbusRegister.DATETIME_YEAR.value),
-            month=self._device.read_register(ModbusRegister.DATETIME_MONTH.value),
-            day=self._device.read_register(ModbusRegister.DATETIME_DAY.value),
-            hour=self._device.read_register(ModbusRegister.DATETIME_HOUR.value),
-            minute=self._device.read_register(ModbusRegister.DATETIME_MINUTE.value),
-            second=self._device.read_register(ModbusRegister.DATETIME_SECONDS.value),
+            year=self._device.read_register(ModbusRegister.DATETIME_GET_YEAR.value),
+            month=self._device.read_register(ModbusRegister.DATETIME_GET_MONTH.value),
+            day=self._device.read_register(ModbusRegister.DATETIME_GET_DAY.value),
+            hour=self._device.read_register(ModbusRegister.DATETIME_GET_HOUR.value),
+            minute=self._device.read_register(ModbusRegister.DATETIME_GET_MINUTE.value),
+            second=self._device.read_register(ModbusRegister.DATETIME_GET_SECOND.value),
             microsecond=0
         )
 
     def set_datetime(self, dt: datetime) -> None:
         dt = dt.replace(second=0, microsecond=0)
 
-        self._device.write_register(ModbusRegister.DATETIME_DAY.value, dt.day)
-        self._device.write_register(ModbusRegister.DATETIME_MONTH.value, dt.month)
-        self._device.write_register(ModbusRegister.DATETIME_YEAR.value, dt.year)
-        self._device.write_register(ModbusRegister.DATETIME_HOUR.value, dt.hour)
-        self._device.write_register(ModbusRegister.DATETIME_MINUTE.value, dt.minute)
+        self._device.write_register(ModbusRegister.DATETIME_GET_SET_DAY.value, dt.day)
+        self._device.write_register(ModbusRegister.DATETIME_GET_SET_MONTH.value, dt.month)
+        self._device.write_register(ModbusRegister.DATETIME_GET_SET_YEAR.value, dt.year)
+        self._device.write_register(ModbusRegister.DATETIME_GET_SET_HOUR.value, dt.hour)
+        self._device.write_register(ModbusRegister.DATETIME_GET_SET_MINUTE.value, dt.minute)
 
         self._write_ctrl_reg_feedback(ModbusRegister.DATETIME_SAVE.value)
 
@@ -225,8 +246,8 @@ class EnbioWiFiMachine:
     def get_process_counter(self) -> int:
         return self._device.read_register(ModbusRegister.EXECUTION_COUNTER.value)
 
-    # def clear_process_counter(self) -> None:
-    #     self._write_reg_feedback(ModbusRegister.EXECUTION_COUNTER.value, 0)
+    def clear_process_counter(self) -> None:
+        self._write_reg_feedback(ModbusRegister.EXECUTION_COUNTER.value, 0, await_time=1.0)
 
     def save_all(self) -> None:
         self._write_ctrl_reg_feedback(ModbusRegister.SAVE_ALL.value)
