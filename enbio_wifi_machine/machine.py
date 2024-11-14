@@ -406,6 +406,33 @@ class EnbioWiFiMachine:
         elif relay == Relay.SteamgenSingle:
             self._write_reg_feedback(ModbusRegister.RELAY_STEAMGEN_C.value, state.value)
 
+    def get_pressure(self, sensor: str) -> float:
+        if sensor == "process":
+            return self._read_float_register(ModbusRegister.PRESSURE_PROCESS.value)
+        if sensor == "external":
+            return self._read_float_register(ModbusRegister.ATMOSPHERIC_PRESSURE.value)
+        raise ValueError("Bad 'sensor' argument")
+
+    def get_temperature(self, sensor: str) -> float:
+        if sensor == "process":
+            return self._read_float_register(ModbusRegister.TEMPERATURE_PROCESS.value)
+        if sensor == "chamber":
+            return self._read_float_register(ModbusRegister.TEMPERATURE_CHAMBER.value)
+        if sensor == "steamgen":
+            return self._read_float_register(ModbusRegister.TEMPERATURE_STEAMGEN.value)
+        if sensor == "external":
+            return self._read_float_register(ModbusRegister.TEMPERATURE_EXTERNAL.value)
+        raise ValueError("Bad 'sensor' argument")
+
+    def get_raw_temperature(self, sensor: str) -> float:
+        if sensor == "process":
+            return self._read_float_register(ModbusRegister.ADCF_TMPR_PROCESS.value)
+        if sensor == "chamber":
+            return self._read_float_register(ModbusRegister.ADCF_TMPR_CHAMBER.value)
+        if sensor == "steamgen":
+            return self._read_float_register(ModbusRegister.ADCF_TMPR_STEAMGE.value)
+        raise ValueError("Bad 'sensor' argument")
+
     def runmonitor(self, proces_name: str) -> None:
         pass
         # proc_runner = ProcRunner(self._device)

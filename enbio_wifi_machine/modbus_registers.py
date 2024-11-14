@@ -51,7 +51,7 @@ class ModbusRegister(Enum):
     TEMPERATURE_STEAMGEN = 568
     ATMOSPHERIC_PRESSURE = 576
 
-    ADCF_TMPR_PROCESS = 552 #TODO ADC AS FLOAT
+    ADCF_TMPR_PROCESS = 552
     ADCF_TMPR_CHAMBER = 554
     ADCF_TMPR_STEAMGE = 556
 
@@ -85,3 +85,6 @@ class ModbusRegister(Enum):
     VALVES_AND_RELAYS = 3503
 
     CHANGE_SCREEN = 3550
+    TEMPERATURE_EXTERNAL = 3510
+
+    #TODO add memory monitoring registers

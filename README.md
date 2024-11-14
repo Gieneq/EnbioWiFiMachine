@@ -155,14 +155,14 @@ Actually water pump uses hardware timer with variable on_time and interval. Used
 | `SCALE_FACTORS_TMPR_PROC_B`  | 528f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'b' of temperature chamber sensor.                               |
 | `SCALE_FACTORS_TMPR_CHMBR_B` | 530f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'a' of temperature steamgen sensor.                              |
 | `SCALE_FACTORS_TMPR_SG_B`    | 532f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'b' of temperature steamgen sensor.                              |
-| `PRESSURE_PROCESS`           | 562f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `TEMPERATURE_PROCESS`        | 564f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `TEMPERATURE_CHAMBER`        | 566f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `TEMPERATURE_STEAMGEN`       | 568f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `ATMOSPHERIC_PRESSURE`       | 576f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `ADCF_TMPR_PROCESS`          | 552f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `ADCF_TMPR_CHAMBER`          | 554f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `ADCF_TMPR_STEAMGE`          | 556f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
+| `PRESSURE_PROCESS`           | 562f     | ✅ Coherent  | R/- | y      | Chamber pressure sensor value in bar.                                                                |
+| `TEMPERATURE_PROCESS`        | 564f     | ✅ Coherent  | R/- | y      | Temperature process in *C.                                                                           |
+| `TEMPERATURE_CHAMBER`        | 566f     | ✅ Coherent  | R/- | y      | Temperature chamber in *C.                                                                           |
+| `TEMPERATURE_STEAMGEN`       | 568f     | ✅ Coherent  | R/- | y      | Temperature steamgen in *C.                                                                          |
+| `ATMOSPHERIC_PRESSURE`       | 576f     | ✅ Coherent  | R/- | y      | External pressure onboard sensor value in bar.                                                       |
+| `ADCF_TMPR_PROCESS`          | 552f     | ✅ Coherent  | R/- | y      | Retrive raw ADC process temperature sensor value but converted to float (for some unknown reason).   |
+| `ADCF_TMPR_CHAMBER`          | 554f     | ✅ Coherent  | R/- | y      | Retrive raw ADC chamber temperature sensor value but converted to float (for some unknown reason).   |
+| `ADCF_TMPR_STEAMGE`          | 556f     | ✅ Coherent  | R/- | y      | Retrive raw ADC steamgen temperature sensor value but converted to float (for some unknown reason).  |
 | `STANDBY_COOLING_THRSH`      | 223u     | ✅ Coherent  | R/W | y      | Set threshold at whichfans should work on idle state. TODO add variable to set speed.                |
 | `RELAY_STEAMGEN_AB`          | 1519u    | ✅ Coherent  | R/W | y      | Read/Write double steamgen relay state. Use 3 state control.                                         |
 | `RELAY_CHAMBER_AB`           | 1520u    | ✅ Coherent  | R/W | y      | Read/Write chamber relay state. Use 3 state control.                                                 |
@@ -184,9 +184,8 @@ Actually water pump uses hardware timer with variable on_time and interval. Used
 | `PWR_SG_TARGET`              | 0        | ?           | -/- |        | xxxx                                                                                                 |
 | `PWR_SG_DRV_MONITOR`         | 0        | ?           | -/- |        | xxxx                                                                                                 |
 | `VALVES_AND_RELAYS`          | 0        | ?           | -/- |        | xxxx                                                                                                 |
-| `CHANGE_SCREEN`              | 3550     | ❌ New       | R/W | y      | Change screenn, not all transitions supported                                                        |
-| `xx`                         | 0        | ?           | -/- |        | xxxx                                                                                                 |
-| `xx`                         | 0        | ?           | -/- |        | xxxx                                                                                                 |
+| `CHANGE_SCREEN`              | 3550u    | ❌ New       | R/W | y      | Change screenn, not all transitions supported                                                        |
+| `TEMPERATURE_EXTERNAL`       | 3510f    | ❌ New       | R/- | y      | Get external (PCB) temperature. Can be 40-80*C easly.                                                |
 | `xx`                         | 0        | ?           | -/- |        | xxxx                                                                                                 |
 | `xx`                         | 0        | ?           | -/- |        | xxxx                                                                                                 |
 | `xx`                         | 0        | ?           | -/- |        | xxxx                                                                                                 |

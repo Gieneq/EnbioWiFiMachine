@@ -381,3 +381,17 @@ def test_enbio_device_relays(enbio_wifi_machine):
         assert enbio_wifi_machine.get_relay(relay) == RelayState.Auto
 
 
+def test_get_pressures_temperatures(enbio_wifi_machine):
+    print(f"pressure process: {enbio_wifi_machine.get_pressure('process')} bar")
+    print(f"pressure external: {enbio_wifi_machine.get_pressure('external')} bar")
+
+    print(f"temperature process: {enbio_wifi_machine.get_temperature('process')} *C")
+    print(f"temperature chamber: {enbio_wifi_machine.get_temperature('chamber')} *C")
+    print(f"temperature steamgen: {enbio_wifi_machine.get_temperature('steamgen')} *C")
+    print(f"temperature external: {enbio_wifi_machine.get_temperature('external')} *C")
+
+
+def test_get_adc_raw_temperature(enbio_wifi_machine):
+    print(f"temperature process sensor raw ADC value: {enbio_wifi_machine.get_raw_temperature('process')}")
+    print(f"temperature chamber sensor raw ADC value: {enbio_wifi_machine.get_raw_temperature('chamber')}")
+    print(f"temperature steamgen sensor raw ADC value: {enbio_wifi_machine.get_raw_temperature('steamgen')}")
