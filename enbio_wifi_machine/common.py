@@ -60,6 +60,30 @@ class ProcessType(Enum):
     THELIX = 6
 
 
+class Relay(Enum):
+    SteamgenDouble = 0
+    Chamber = 1
+    VacuumPump = 2
+    WaterPump = 3
+    Valve1 = 4
+    Valve2 = 5
+    Valve3 = 6
+    Valve5 = 7
+    SteamgenSingle = 11
+
+
+class ValveState(Enum):
+    Auto = 0
+    Open = 1
+    Closed = 2
+
+
+class RelayState(Enum):
+    Auto = 0
+    On = 1
+    Off = 2
+
+
 class ScreenId(Enum):
     MAIN = 0
 

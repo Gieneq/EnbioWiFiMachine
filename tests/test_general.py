@@ -5,7 +5,7 @@ import pytest
 import re
 from enbio_wifi_machine.machine import EnbioWiFiMachine
 from enbio_wifi_machine.common import EnbioDeviceInternalException, await_value, float_to_ints, ints_to_float, \
-    ProcessType, ScreenId, ScaleFactors, ScaleFactor
+    ProcessType, ScreenId, ScaleFactors, ScaleFactor, ValveState, RelayState, Relay
 
 epsilon = 1e-4
 minimal_reboot_time_sec = 11
@@ -351,4 +351,33 @@ def test_enbio_device_scale_factors_load_save_with_reboot():
     enbio_wifi_machine.set_scale_factors(original_sf)
 
     assert tmp_scales.equals(actual_sf)
+
+
+def test_enbio_device_valves(enbio_wifi_machine):
+    valves_list = [Relay.Valve1, Relay.Valve2, Relay.Valve3, Relay.Valve5]
+    for valve in valves_list:
+        print(f"Test valve: {valve}")
+        enbio_wifi_machine.set_valve(valve, ValveState.Open)
+        assert enbio_wifi_machine.get_valve(valve) == ValveState.Open
+        time.sleep(1)
+        enbio_wifi_machine.set_valve(valve, ValveState.Closed)
+        assert enbio_wifi_machine.get_valve(valve) == ValveState.Closed
+        time.sleep(1)
+        enbio_wifi_machine.set_valve(valve, ValveState.Auto)
+        assert enbio_wifi_machine.get_valve(valve) == ValveState.Auto
+
+
+def test_enbio_device_relays(enbio_wifi_machine):
+    relays_list = [Relay.SteamgenDouble, Relay.Chamber, Relay.VacuumPump, Relay.WaterPump, Relay.SteamgenSingle]
+    for relay in relays_list:
+        print(f"Test relay: {relay}")
+        enbio_wifi_machine.set_relay(relay, RelayState.On)
+        assert enbio_wifi_machine.get_relay(relay) == RelayState.On
+        time.sleep(1)
+        enbio_wifi_machine.set_relay(relay, RelayState.Off)
+        assert enbio_wifi_machine.get_relay(relay) == RelayState.Off
+        time.sleep(1)
+        enbio_wifi_machine.set_relay(relay, RelayState.Auto)
+        assert enbio_wifi_machine.get_relay(relay) == RelayState.Auto
+
 

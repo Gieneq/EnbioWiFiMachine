@@ -4,7 +4,7 @@ from .machine import EnbioWiFiMachine
 from .common import process_labels, EnbioDeviceInternalException, ScaleFactors
 
 
-def main():
+def initialize_parser():
     parser = argparse.ArgumentParser(description="CLI tool to set and get device name via Modbus.")
     subparsers = parser.add_subparsers(dest="command")
 
@@ -16,27 +16,22 @@ def main():
     _ = subparsers.add_parser("devidget", help="Get the current device name.")
 
     # Subcommand for saving all
-    _ = subparsers.add_parser("saveall", help="Save all.")
+    _ = subparsers.add_parser("saveall", help="Save all current settings to persistent storage.")
 
-    # Subcommand for door lock
+    # Door state commands
     _ = subparsers.add_parser("isdooropen", help="Get door open state, 1 means door is open.")
-
-    # Subcommand for door lock
     _ = subparsers.add_parser("isdoorunlocked", help="Get door lock state, 1 means door is unlocked.")
 
-    _ = subparsers.add_parser("doorlock", help="todo.")
-
-    _ = subparsers.add_parser("doorunlock", help="todo.")
-
-    _ = subparsers.add_parser("doordrvfwd", help="todo.")
-
-    _ = subparsers.add_parser("doordrvbwd", help="todo.")
-
-    _ = subparsers.add_parser("doordrvnone", help="todo.")
+    # Door control commands
+    _ = subparsers.add_parser("doorlock", help="Lock the door.")
+    _ = subparsers.add_parser("doorunlock", help="Unlock the door.")
+    _ = subparsers.add_parser("doordrvfwd", help="Drive the door forward.")
+    _ = subparsers.add_parser("doordrvbwd", help="Drive the door backward.")
+    _ = subparsers.add_parser("doordrvnone", help="Stop door driving.")
 
     _ = subparsers.add_parser("dtsetnow", help="todo.")
 
-    runparser = subparsers.add_parser("runmonitor", help=f"Run program {process_labels}, example: run 134f.")
+    runparser = subparsers.add_parser("run", help=f"Run program {process_labels}, example: run 134f.")
     runparser.add_argument(
         "procname",
         type=str,
@@ -46,12 +41,16 @@ def main():
 
     _ = subparsers.add_parser("monitor", help="todo.")
 
-    # Add 'scales get' command with file path option
+    # Scale factors commands
     scales_get_parser = subparsers.add_parser("scales", help="Manage scale factors.")
     scales_get_parser.add_argument("action", choices=["get", "set"], help="Action to perform: 'get' or 'set'")
     scales_get_parser.add_argument("-f", "--filepath", type=str, required=True, help="File path for scales data.")
 
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = initialize_parser().parse_args()
 
     # Initialize the ModbusTool instance
     try:

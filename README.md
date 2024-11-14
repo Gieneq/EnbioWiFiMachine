@@ -34,23 +34,50 @@ enbio_wifi_machine --help
 
 ## CLI
 
-Set command used to interact with machine.
+Set command used to interact with machine. The machine is detected automatically as first fond of USB serial ports.
 
-| Command                          | Description                                                   |
-|----------------------------------|---------------------------------------------------------------|
-| scales get -f <destination.json> | Read scales from machine and save to destination file.        |
-| scales set -f <source.json>      | Save scales from file to machine. Save to FLASH is also used. |
+| Command                          | Description                                                    |
+|----------------------------------|----------------------------------------------------------------|
+| scales get -f <destination.json> | Read scales from machine and save to destination file.         |
+| scales set -f <source.json>      | Save scales from file to machine. Save to FLASH is also used.  |
+| devidset <deviceid>              | Sets new deviceid (serial number)                              |
+| devidget                         | Get device id.                                                 |
+| saveall                          | Save all parameters.                                           |
+| isdooropen                       | Check if door is locked.                                       |
+| isdoorunlocked                   | Check if door is unlocked                                      |
+| doorlock                         | Lock door with feedback switch.                                |
+| doorunlock                       | Unlock door with feedback switch.                              |
+| doordrvfwd                       | Drive door lock to lock.                                       |
+| doordrvbwd                       | Drive door lock to unlock.                                     |
+| doordrvnone                      | Stop driving door lock.                                        |
+| dtsetnow                         | Set recent date time.                                          |
+| run <process id>                 | Start process or test program. Monitor until finish or Ctrl-C. |
+| monitor                          | Monitor process parameters every 1s until Ctrl-C.              |
+| scales [get, set] -f <filepath>  | Manage sales factors using json file.                          |
 
 ## Module
 
-Todo
+Use `EnbioWiFiMachine` to ineract with device.
 
 ## Registers
 
 In [enbio_wifi_machine/modbus_registers.py](enbio_wifi_machine/modbus_registers.py) there is enum ModbusRegister for all types registers: 16b, 32b and strings.
 Starting from register address 3400 there are new registers.
 
-### Process ID 
+### 3 States control
+
+Valves and Relays with digital outputs can be driven using 3 states:
+
+| State | Value |
+|-------|-------|
+| Auto  | 0     |
+| On    | 1     |
+| Off   | 2     |
+
+Actually water pump uses hardware timer with variable on_time and interval. Used internally or via extension registers.
+
+### Process ID
+
 | Process ID | Value |
 |------------|-------|
 | P121       | 3     |
@@ -61,6 +88,7 @@ Starting from register address 3400 there are new registers.
 | THELIX     | 5     |
 
 ### Process or Test Phase
+
 | Process Phase ID           | Value |
 |----------------------------|-------|
 | Init                       | 0     |
@@ -135,16 +163,16 @@ Starting from register address 3400 there are new registers.
 | `ADCF_TMPR_PROCESS`          | 552f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
 | `ADCF_TMPR_CHAMBER`          | 554f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
 | `ADCF_TMPR_STEAMGE`          | 556f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `STANDBY_COOLING_THRSH`      | 223u     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `RELAY_STEAMGEN_AB`          | 1519u    | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `RELAY_CHAMBER_AB`           | 1520u    | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `RELAY_PUMP_VACUUM`          | 1521u    | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `RELAY_PUMP_WATER`           | 1522u    | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `VALVE1`                     | 1523u    | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `VALVE2`                     | 1524u    | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `VALVE3`                     | 1525u    | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `VALVE5`                     | 1526u    | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `RELAY_STEAMGEN_C`           | 1551u    | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
+| `STANDBY_COOLING_THRSH`      | 223u     | ✅ Coherent  | R/W | y      | Set threshold at whichfans should work on idle state. TODO add variable to set speed.                |
+| `RELAY_STEAMGEN_AB`          | 1519u    | ✅ Coherent  | R/W | y      | Read/Write double steamgen relay state. Use 3 state control.                                         |
+| `RELAY_CHAMBER_AB`           | 1520u    | ✅ Coherent  | R/W | y      | Read/Write chamber relay state. Use 3 state control.                                                 |
+| `RELAY_PUMP_VACUUM`          | 1521u    | ✅ Coherent  | R/W | y      | Read/Write vacuum pump relay state. Use 3 state control.                                             |
+| `RELAY_PUMP_WATER`           | 1522u    | ✅ Coherent  | R/W | y      | Read/Write water pump relay state. Use 3 state control.                                              |
+| `VALVE1`                     | 1523u    | ✅ Coherent  | R/W | y      | Read/Write valve 1 state. Use 3 state control.                                                       |
+| `VALVE2`                     | 1524u    | ✅ Coherent  | R/W | y      | Read/Write valve 2 state. Use 3 state control.                                                       |
+| `VALVE3`                     | 1525u    | ✅ Coherent  | R/W | y      | Read/Write valve 3 state. Use 3 state control.                                                       |
+| `VALVE5`                     | 1526u    | ✅ Coherent  | R/W | y      | Read/Write valve 5 state. Use 3 state control.                                                       |
+| `RELAY_STEAMGEN_C`           | 1551u    | ✅ Coherent  | R/W | y      | Read/Write single steamgen relay state. Use 3 state control.                                         |
 | `TEST_FLOAT`                 | 3490f    | ❌ New       | R/W | y      | Test read write of float                                                                             |
 | `TEST_INT`                   | 3492u    | ❌ New       | R/W | y      | Test read write of int                                                                               |
 | `STM_REBOOT`                 | 3499u    | ❌ New       | -/W | y      | Restart system                                                                                       |

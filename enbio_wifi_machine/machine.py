@@ -5,7 +5,7 @@ import serial.tools.list_ports
 from datetime import datetime
 # from .proc_runner import ProcRunner
 from .common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, float_to_ints, \
-    ints_to_float, cfg, process_type_values, ScreenId, ScaleFactors, ScaleFactor
+    ints_to_float, cfg, process_type_values, ScreenId, ScaleFactors, ScaleFactor, Relay, RelayState, ValveState
 from .modbus_registers import ModbusRegister
 
 
@@ -361,6 +361,50 @@ class EnbioWiFiMachine:
 
         self._write_float_register(ModbusRegister.SCALE_FACTORS_TMPR_SG_A.value, scale_factors.temperature_steamgen.a)
         self._write_float_register(ModbusRegister.SCALE_FACTORS_TMPR_SG_B.value, scale_factors.temperature_steamgen.b)
+
+    def get_valve(self, valve_relay: Relay) -> ValveState:
+        if valve_relay == Relay.Valve1:
+            return ValveState(self._device.read_register(ModbusRegister.VALVE1.value))
+        elif valve_relay == Relay.Valve2:
+            return ValveState(self._device.read_register(ModbusRegister.VALVE2.value))
+        elif valve_relay == Relay.Valve3:
+            return ValveState(self._device.read_register(ModbusRegister.VALVE3.value))
+        elif valve_relay == Relay.Valve5:
+            return ValveState(self._device.read_register(ModbusRegister.VALVE5.value))
+
+    def set_valve(self, valve_relay: Relay, valve_state: ValveState) -> None:
+        if valve_relay == Relay.Valve1:
+            self._write_reg_feedback(ModbusRegister.VALVE1.value, valve_state.value)
+        if valve_relay == Relay.Valve2:
+            self._write_reg_feedback(ModbusRegister.VALVE2.value, valve_state.value)
+        if valve_relay == Relay.Valve3:
+            self._write_reg_feedback(ModbusRegister.VALVE3.value, valve_state.value)
+        if valve_relay == Relay.Valve5:
+            self._write_reg_feedback(ModbusRegister.VALVE5.value, valve_state.value)
+
+    def get_relay(self, relay: Relay) -> RelayState:
+        if relay == Relay.SteamgenDouble:
+            return RelayState(self._device.read_register(ModbusRegister.RELAY_STEAMGEN_AB.value))
+        elif relay == Relay.Chamber:
+            return RelayState(self._device.read_register(ModbusRegister.RELAY_CHAMBER_AB.value))
+        elif relay == Relay.VacuumPump:
+            return RelayState(self._device.read_register(ModbusRegister.RELAY_PUMP_VACUUM.value))
+        elif relay == Relay.WaterPump:
+            return RelayState(self._device.read_register(ModbusRegister.RELAY_PUMP_WATER.value))
+        elif relay == Relay.SteamgenSingle:
+            return RelayState(self._device.read_register(ModbusRegister.RELAY_STEAMGEN_C.value))
+
+    def set_relay(self, relay: Relay, state: RelayState) -> None:
+        if relay == Relay.SteamgenDouble:
+            self._write_reg_feedback(ModbusRegister.RELAY_STEAMGEN_AB.value, state.value)
+        elif relay == Relay.Chamber:
+            self._write_reg_feedback(ModbusRegister.RELAY_CHAMBER_AB.value, state.value)
+        elif relay == Relay.VacuumPump:
+            self._write_reg_feedback(ModbusRegister.RELAY_PUMP_VACUUM.value, state.value)
+        elif relay == Relay.WaterPump:
+            self._write_reg_feedback(ModbusRegister.RELAY_PUMP_WATER.value, state.value)
+        elif relay == Relay.SteamgenSingle:
+            self._write_reg_feedback(ModbusRegister.RELAY_STEAMGEN_C.value, state.value)
 
     def runmonitor(self, proces_name: str) -> None:
         pass
