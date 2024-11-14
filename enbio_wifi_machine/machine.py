@@ -5,7 +5,7 @@ import serial.tools.list_ports
 from datetime import datetime
 # from .proc_runner import ProcRunner
 from .common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, float_to_ints, \
-    ints_to_float, cfg, process_type_values, ScreenId
+    ints_to_float, cfg, process_type_values, ScreenId, ScaleFactors, ScaleFactor
 from .modbus_registers import ModbusRegister
 
 
@@ -326,6 +326,41 @@ class EnbioWiFiMachine:
             sg_b=valves_and_relays & (1 << 8) > 0,
             sg_c=valves_and_relays & (1 << 9) > 0,
         )
+
+    def get_scale_factors(self) -> ScaleFactors:
+        scale_factors = ScaleFactors(
+            pressure_process=ScaleFactor(
+                a=self._read_float_register(ModbusRegister.SCALE_FACTORS_PRESS_PROC_A.value),
+                b=self._read_float_register(ModbusRegister.SCALE_FACTORS_PRESS_PROC_B.value)
+            ),
+            temperature_process=ScaleFactor(
+                a=self._read_float_register(ModbusRegister.SCALE_FACTORS_TMPR_PROC_A.value),
+                b=self._read_float_register(ModbusRegister.SCALE_FACTORS_TMPR_PROC_B.value)
+            ),
+            temperature_chamber=ScaleFactor(
+                a=self._read_float_register(ModbusRegister.SCALE_FACTORS_TMPR_CHMBR_A.value),
+                b=self._read_float_register(ModbusRegister.SCALE_FACTORS_TMPR_CHMBR_B.value)
+            ),
+            temperature_steamgen=ScaleFactor(
+                a=self._read_float_register(ModbusRegister.SCALE_FACTORS_TMPR_SG_A.value),
+                b=self._read_float_register(ModbusRegister.SCALE_FACTORS_TMPR_SG_B.value)
+            )
+        )
+
+        return scale_factors
+
+    def set_scale_factors(self, scale_factors: ScaleFactors) -> None:
+        self._write_float_register(ModbusRegister.SCALE_FACTORS_PRESS_PROC_A.value, scale_factors.pressure_process.a)
+        self._write_float_register(ModbusRegister.SCALE_FACTORS_PRESS_PROC_B.value, scale_factors.pressure_process.b)
+
+        self._write_float_register(ModbusRegister.SCALE_FACTORS_TMPR_PROC_A.value, scale_factors.temperature_process.a)
+        self._write_float_register(ModbusRegister.SCALE_FACTORS_TMPR_PROC_B.value, scale_factors.temperature_process.b)
+
+        self._write_float_register(ModbusRegister.SCALE_FACTORS_TMPR_CHMBR_A.value, scale_factors.temperature_chamber.a)
+        self._write_float_register(ModbusRegister.SCALE_FACTORS_TMPR_CHMBR_B.value, scale_factors.temperature_chamber.b)
+
+        self._write_float_register(ModbusRegister.SCALE_FACTORS_TMPR_SG_A.value, scale_factors.temperature_steamgen.a)
+        self._write_float_register(ModbusRegister.SCALE_FACTORS_TMPR_SG_B.value, scale_factors.temperature_steamgen.b)
 
     def runmonitor(self, proces_name: str) -> None:
         pass

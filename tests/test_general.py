@@ -1,17 +1,85 @@
+import os.path
 import time
 from datetime import datetime, timedelta
 import pytest
 import re
 from enbio_wifi_machine.machine import EnbioWiFiMachine
 from enbio_wifi_machine.common import EnbioDeviceInternalException, await_value, float_to_ints, ints_to_float, \
-    ProcessType, ScreenId
+    ProcessType, ScreenId, ScaleFactors, ScaleFactor
 
 epsilon = 1e-4
 minimal_reboot_time_sec = 11
+test_data_dir_path = "data"
+
+""" Tools """
+
+
+def get_next_backup_filepath(directory, base_filename):
+    # Separate the base filename and extension
+    name, ext = os.path.splitext(base_filename)
+
+    # Check for files with similar naming pattern
+    index = 1
+    while True:
+        indexed_filename = f"{name}_{index}{ext}"
+        if not os.path.exists(os.path.join(directory, indexed_filename)):
+            break
+        index += 1
+
+    return os.path.join(directory, indexed_filename)
+
+
+""" Unit tests """
+
+
+def test_float_conversion():
+    float_value = 107.33
+    low, high = float_to_ints(float_value)
+    actual_float = ints_to_float(low, high)
+    assert abs(float_value - actual_float) < epsilon
+
+
+def test_enbio_device_scale_factors_serialize():
+    # Sample data
+    pressure_scale = ScaleFactor(a=1.0, b=0.5)
+    temperature_scale = ScaleFactor(a=2.0, b=1.0)
+    chamber_scale = ScaleFactor(a=0.8, b=0.3)
+    steamgen_scale = ScaleFactor(a=1.2, b=0.2)
+
+    scales = ScaleFactors(
+        pressure_process=pressure_scale,
+        temperature_process=temperature_scale,
+        temperature_chamber=chamber_scale,
+        temperature_steamgen=steamgen_scale
+    )
+
+    # Path to the JSON file
+    filename = "scale_factors_serialization_test.json"
+    path = os.path.join(test_data_dir_path, filename)
+
+    # Save to JSON file
+    with open(path, "w") as f:
+        f.write(scales.to_json(pretty=True))
+
+    # Load from JSON file
+    with open(path, "r") as f:
+        loaded_scales = ScaleFactors.from_json(f.read())
+
+    # Check loaded data
+    print(loaded_scales)
+
+    assert scales.equals(loaded_scales)
+
+
+""" Integration tests with real machine """
 
 
 @pytest.fixture
 def enbio_wifi_machine():
+
+    # Ensure test data directory exists
+    os.makedirs(test_data_dir_path, exist_ok=True)
+
     # Setup device for tests
     device = EnbioWiFiMachine()
 
@@ -25,13 +93,6 @@ def test_int_saving(enbio_wifi_machine):
     val = 125
     enbio_wifi_machine.set_test_int(val)
     assert val == enbio_wifi_machine.get_test_int()
-
-
-def test_float_conversion():
-    float_value = 107.33
-    low, high = float_to_ints(float_value)
-    actual_float = ints_to_float(low, high)
-    assert abs(float_value - actual_float) < epsilon
 
 
 def test_float_saving(enbio_wifi_machine):
@@ -141,6 +202,7 @@ def test_enbio_device_datetime_saving_reboot():
     print(f"Time diff between set and get: {actual_seconds_passed}")
     assert actual_seconds_passed != seconds_to_wait
 
+
 def test_enbio_device_firmware_version(enbio_wifi_machine):
     pattern = r"^\d+\.\d+\.\d+$"
     firmware_version = enbio_wifi_machine.get_firmware_version()
@@ -223,7 +285,7 @@ def test_enbio_device_saving():
 
     # Reboot and sleep
     tool.reboot()
-    time.sleep(10)
+    time.sleep(minimal_reboot_time_sec)
 
     tool = EnbioWiFiMachine()
     device_id = tool.get_device_id()
@@ -239,3 +301,54 @@ def test_enbio_device_lock_frequent(enbio_wifi_machine):
 
         enbio_wifi_machine.door_unlock_with_feedback(timeout=0.5)
         assert enbio_wifi_machine.is_door_unlocked()
+
+
+def test_enbio_device_scale_factors_load_save(enbio_wifi_machine):
+    scale_factors_filename = "scale_factors.json"
+    path = os.path.join(test_data_dir_path, scale_factors_filename)
+
+    sf = enbio_wifi_machine.get_scale_factors()
+    json_data = sf.to_json()
+    with open(path, "w") as f:
+        f.write(json_data)
+
+    enbio_wifi_machine.set_scale_factors(sf)
+
+    actual_sf = enbio_wifi_machine.get_scale_factors()
+
+    assert sf == actual_sf
+
+
+def test_enbio_device_scale_factors_load_save_with_reboot():
+    # Do not use fixture!
+    enbio_wifi_machine = EnbioWiFiMachine()
+    scale_factors_filename = "backup_scale_factors.json"
+    path = get_next_backup_filepath(test_data_dir_path, scale_factors_filename)
+
+    original_sf = enbio_wifi_machine.get_scale_factors()
+    json_data = original_sf.to_json()
+    with open(path, "w") as f:
+        f.write(json_data)
+
+    # Use temporary sale factors
+    tmp_scales = ScaleFactors(
+        pressure_process=ScaleFactor(a=8.71000003487803e-05, b=0.924238007068634),
+        temperature_process=ScaleFactor(a=0.0058479998260736465, b=15.80257682800293),
+        temperature_chamber=ScaleFactor(a=0.00384500003606081, b=15.295173072814941),
+        temperature_steamgen=ScaleFactor(a=0.004634000185132027, b=14.816951560974121)
+    )
+
+    enbio_wifi_machine.set_scale_factors(tmp_scales)
+    enbio_wifi_machine.save_all()
+
+    # Reboot and sleep
+    enbio_wifi_machine.reboot()
+    time.sleep(minimal_reboot_time_sec)
+
+    actual_sf = enbio_wifi_machine.get_scale_factors()
+
+    # Set scales before assert to prevent discarding
+    enbio_wifi_machine.set_scale_factors(original_sf)
+
+    assert tmp_scales.equals(actual_sf)
+

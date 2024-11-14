@@ -34,7 +34,12 @@ enbio_wifi_machine --help
 
 ## CLI
 
-Todo
+Set command used to interact with machine.
+
+| Command                          | Description                                                   |
+|----------------------------------|---------------------------------------------------------------|
+| scales get -f <destination.json> | Read scales from machine and save to destination file.        |
+| scales set -f <source.json>      | Save scales from file to machine. Save to FLASH is also used. |
 
 ## Module
 
@@ -102,26 +107,26 @@ Starting from register address 3400 there are new registers.
 | `SEND_REPORT_ENABLE`         | 130u     | ✅ Coherent  | -/- |        | TODO                                                                                                 |
 | `RESET_ONE_YEAR_COUNTER`     | 239u     | ✅ Coherent  | -/- |        | TODO                                                                                                 |
 | `CLEAR_ERR_HISTORY`          | 152u     | ✅ Coherent  | -/- |        | TODO                                                                                                 |
-| `DATETIME_GET_YEAR`          | 1512u    | ✅ Coherent  | -/- | y      | Read only year value 2000-2099                                                                       |
-| `DATETIME_GET_MONTH`         | 1513u    | ✅ Coherent  | -/- | y      | Read only month value: 1-12                                                                          |
-| `DATETIME_GET_DAY`           | 1514u    | ✅ Coherent  | -/- | y      | Read only day value: 1-31                                                                            |
-| `DATETIME_GET_HOUR`          | 1515u    | ✅ Coherent  | -/- | y      | Read only hour value: 0-24                                                                           |
-| `DATETIME_GET_MINUTE`        | 1516u    | ✅ Coherent  | -/- | y      | Read only minute value: 0-60                                                                         |
-| `DATETIME_GET_SECOND`        | 1517u    | ✅ Coherent  | -/- | y      | Read only second value: 0-60. Save time clears second to 0.                                          |
-| `DATETIME_SET_DAY`           | 111u     | ✅ Coherent  | -/- | y      | Read, write day value: 1-31                                                                          |
-| `DATETIME_SET_MONTH`         | 112u     | ✅ Coherent  | -/- | y      | Read, write month value: 1-12                                                                        |
-| `DATETIME_SET_YEAR`          | 113u     | ✅ Coherent  | -/- | y      | Read, write year value 2000-2099                                                                     |
-| `DATETIME_SET_HOUR`          | 114u     | ✅ Coherent  | -/- | y      | Read, write hour value: 0-24                                                                         |
-| `DATETIME_SET_MINUTE`        | 115u     | ✅ Coherent  | -/- | y      | Read, write minute value: 0-60                                                                       |
-| `DATETIME_SAVE`              | 116u     | ✅ Coherent  | -/- | y      | Saves time to RTC domain, clearing seconds.                                                          |
-| `SCALE_FACTORS_PRESS_PROC_A` | 514f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `SCALE_FACTORS_TMPR_PROC_A`  | 516f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `SCALE_FACTORS_TMPR_CHMBR_A` | 518f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `SCALE_FACTORS_TMPR_SG_A`    | 520f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `SCALE_FACTORS_PRESS_PROC_B` | 526f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `SCALE_FACTORS_TMPR_PROC_B`  | 528f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `SCALE_FACTORS_TMPR_CHMBR_B` | 530f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
-| `SCALE_FACTORS_TMPR_SG_B`    | 532f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
+| `DATETIME_GET_YEAR`          | 1512u    | ✅ Coherent  | R/- | y      | Read only year value 2000-2099                                                                       |
+| `DATETIME_GET_MONTH`         | 1513u    | ✅ Coherent  | R/- | y      | Read only month value: 1-12                                                                          |
+| `DATETIME_GET_DAY`           | 1514u    | ✅ Coherent  | R/- | y      | Read only day value: 1-31                                                                            |
+| `DATETIME_GET_HOUR`          | 1515u    | ✅ Coherent  | R/- | y      | Read only hour value: 0-24                                                                           |
+| `DATETIME_GET_MINUTE`        | 1516u    | ✅ Coherent  | R/- | y      | Read only minute value: 0-60                                                                         |
+| `DATETIME_GET_SECOND`        | 1517u    | ✅ Coherent  | R/- | y      | Read only second value: 0-60. Save time clears second to 0.                                          |
+| `DATETIME_GET_SET_DAY`       | 111u     | ✅ Coherent  | R/W | y      | Read, write day value: 1-31                                                                          |
+| `DATETIME_GET_SET_MONTH`     | 112u     | ✅ Coherent  | R/W | y      | Read, write month value: 1-12                                                                        |
+| `DATETIME_GET_SET_YEAR`      | 113u     | ✅ Coherent  | R/W | y      | Read, write year value 2000-2099                                                                     |
+| `DATETIME_GET_SET_HOUR`      | 114u     | ✅ Coherent  | R/W | y      | Read, write hour value: 0-24                                                                         |
+| `DATETIME_GET_SET_MINUTE`    | 115u     | ✅ Coherent  | R/W | y      | Read, write minute value: 0-60                                                                       |
+| `DATETIME_SAVE`              | 116u     | ✅ Coherent  | R/W | y      | Saves time to RTC domain, clearing seconds.                                                          |
+| `SCALE_FACTORS_PRESS_PROC_A` | 514f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'a' of pressure process sensor.                                  |
+| `SCALE_FACTORS_TMPR_PROC_A`  | 516f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'b' of pressure process sensor.                                  |
+| `SCALE_FACTORS_TMPR_CHMBR_A` | 518f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'a' of temperature process sensor.                               |
+| `SCALE_FACTORS_TMPR_SG_A`    | 520f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'b' of temperature process sensor.                               |
+| `SCALE_FACTORS_PRESS_PROC_B` | 526f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'a' of temperature chamber sensor.                               |
+| `SCALE_FACTORS_TMPR_PROC_B`  | 528f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'b' of temperature chamber sensor.                               |
+| `SCALE_FACTORS_TMPR_CHMBR_B` | 530f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'a' of temperature steamgen sensor.                              |
+| `SCALE_FACTORS_TMPR_SG_B`    | 532f     | ✅ Coherent  | R/W | y      | Read/write scale factor coefficient 'b' of temperature steamgen sensor.                              |
 | `PRESSURE_PROCESS`           | 562f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
 | `TEMPERATURE_PROCESS`        | 564f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |
 | `TEMPERATURE_CHAMBER`        | 566f     | ✅ Coherent  | -/- |        | xxxx                                                                                                 |

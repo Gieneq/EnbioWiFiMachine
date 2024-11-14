@@ -1,7 +1,7 @@
 import argparse
 from datetime import datetime
 from .machine import EnbioWiFiMachine
-from .common import process_labels, EnbioDeviceInternalException
+from .common import process_labels, EnbioDeviceInternalException, ScaleFactors
 
 
 def main():
@@ -45,6 +45,11 @@ def main():
     )
 
     _ = subparsers.add_parser("monitor", help="todo.")
+
+    # Add 'scales get' command with file path option
+    scales_get_parser = subparsers.add_parser("scales", help="Manage scale factors.")
+    scales_get_parser.add_argument("action", choices=["get", "set"], help="Action to perform: 'get' or 'set'")
+    scales_get_parser.add_argument("-f", "--filepath", type=str, required=True, help="File path for scales data.")
 
     args = parser.parse_args()
 
@@ -147,6 +152,21 @@ def main():
             print(f"Device Error: {e}")
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
+
+    elif args.command == "scales":
+        if args.action == "get":
+            print(f"Loading scales from machine and saving to: {args.filepath}")
+            loaded_scales = tool.get_scale_factors()
+            with open(args.filepath, "w") as f:
+                f.write(loaded_scales.to_json(pretty=True))
+
+        elif args.action == "set":
+            print(f"Using scales from: {args.filepath} and saving to machine")
+            with open(args.filepath, "r") as f:
+                scales_to_be_saved = ScaleFactors.from_json(f.read())
+                tool.set_scale_factors(scales_to_be_saved)
+            print(f"Saving to FLASH")
+            tool.save_all()
 
     else:
         parser.print_help()

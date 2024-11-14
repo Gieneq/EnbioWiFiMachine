@@ -2,7 +2,8 @@ from enum import Enum
 import time
 import struct
 import minimalmodbus
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+import json
 
 cfg = {
     "serial_timeout": 2.5,
@@ -12,7 +13,7 @@ cfg = {
 
 def ints_to_float(low, high):
     """Convert a tuple of two 16-bit integers to a float."""
-    int_value = (high << 16) | low
+    int_value = (low << 16) | high
     packed_value = struct.pack(">I", int_value)  # ">I" for big-endian 32-bit unsigned integer
     return struct.unpack(">f", packed_value)[0]  # ">f" for big-endian 32-bit float
 
@@ -21,8 +22,8 @@ def float_to_ints(float_value):
     """Convert a float to a tuple of two 16-bit integers."""
     packed_value = struct.pack(">f", float_value)  # ">f" for big-endian 32-bit float
     int_value = struct.unpack(">I", packed_value)[0]  # ">I" for big-endian 32-bit unsigned integer
-    high = (int_value >> 16) & 0xFFFF
-    low = int_value & 0xFFFF
+    low = (int_value >> 16) & 0xFFFF
+    high = int_value & 0xFFFF
     return low, high
 
 
@@ -120,3 +121,50 @@ class ProcessLine:
     sg_a: bool
     sg_b: bool
     sg_c: bool
+
+
+@dataclass
+class ScaleFactor:
+    a: float
+    b: float
+
+    def to_json(self):
+        return json.dumps(asdict(self))
+
+    def equals(self, other: "ScaleFactor", precision: int = 3) -> bool:
+        """Check if two ScaleFactor instances are equal up to a given decimal precision."""
+        return (
+                round(self.a, precision) == round(other.a, precision) and
+                round(self.b, precision) == round(other.b, precision)
+        )
+
+
+@dataclass
+class ScaleFactors:
+    pressure_process: ScaleFactor
+    temperature_process: ScaleFactor
+    temperature_chamber: ScaleFactor
+    temperature_steamgen: ScaleFactor
+
+    def to_json(self, pretty: bool = True):
+        return json.dumps(asdict(self), indent=4 if pretty else None)
+
+    @staticmethod
+    def from_json(json_data: str) -> "ScaleFactors":
+        """Deserialize a JSON string to a ScaleFactors object."""
+        data = json.loads(json_data)
+        return ScaleFactors(
+            pressure_process=ScaleFactor(**data['pressure_process']),
+            temperature_process=ScaleFactor(**data['temperature_process']),
+            temperature_chamber=ScaleFactor(**data['temperature_chamber']),
+            temperature_steamgen=ScaleFactor(**data['temperature_steamgen']),
+        )
+
+    def equals(self, other: "ScaleFactors", precision: int = 3) -> bool:
+        """Check if two ScaleFactors instances are equal up to a given decimal precision."""
+        return (
+                self.pressure_process.equals(other.pressure_process, precision) and
+                self.temperature_process.equals(other.temperature_process, precision) and
+                self.temperature_chamber.equals(other.temperature_chamber, precision) and
+                self.temperature_steamgen.equals(other.temperature_steamgen, precision)
+        )
