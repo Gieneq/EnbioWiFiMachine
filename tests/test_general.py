@@ -384,6 +384,7 @@ def test_enbio_device_relays(enbio_wifi_machine):
 def test_get_pressures_temperatures(enbio_wifi_machine):
     print(f"pressure process: {enbio_wifi_machine.get_pressure('process')} bar")
     print(f"pressure external: {enbio_wifi_machine.get_pressure('external')} bar")
+    print(f"pressure relative: {enbio_wifi_machine.get_pressure('relative')} bar")
 
     print(f"temperature process: {enbio_wifi_machine.get_temperature('process')} *C")
     print(f"temperature chamber: {enbio_wifi_machine.get_temperature('chamber')} *C")
@@ -392,6 +393,65 @@ def test_get_pressures_temperatures(enbio_wifi_machine):
 
 
 def test_get_adc_raw_temperature(enbio_wifi_machine):
+    print(f"pressure process sensor raw ADC value: {enbio_wifi_machine.get_raw_temperature('pressure')}")
     print(f"temperature process sensor raw ADC value: {enbio_wifi_machine.get_raw_temperature('process')}")
     print(f"temperature chamber sensor raw ADC value: {enbio_wifi_machine.get_raw_temperature('chamber')}")
     print(f"temperature steamgen sensor raw ADC value: {enbio_wifi_machine.get_raw_temperature('steamgen')}")
+
+
+def test_enbio_device_do_state_valves(enbio_wifi_machine):
+    enbio_wifi_machine.set_valve(Relay.Valve1, ValveState.Open)
+    enbio_wifi_machine.set_valve(Relay.Valve2, ValveState.Closed)
+    enbio_wifi_machine.set_valve(Relay.Valve3, ValveState.Open)
+    enbio_wifi_machine.set_valve(Relay.Valve5, ValveState.Closed)
+
+    do_state = enbio_wifi_machine.get_do_state()
+    print(f"DO State: {do_state}")
+
+    assert do_state.v1_open is True
+    assert do_state.v2_open is False
+    assert do_state.v3_open is True
+    assert do_state.v5_open is False
+
+    valves_list = [Relay.Valve1, Relay.Valve2, Relay.Valve3, Relay.Valve5]
+    for valve in valves_list:
+        enbio_wifi_machine.set_valve(valve, ValveState.Auto)
+
+
+def test_enbio_device_do_state_pumps_vacuum(enbio_wifi_machine):
+    enbio_wifi_machine.set_relay(Relay.VacuumPump, RelayState.On)
+    time.sleep(0.25)
+
+    do_state = enbio_wifi_machine.get_do_state()
+    print(f"DO State: {do_state}")
+    assert do_state.pump_vac is True
+    assert do_state.pump_water is False
+
+    enbio_wifi_machine.set_relay(Relay.VacuumPump, RelayState.Off)
+
+    do_state = enbio_wifi_machine.get_do_state()
+    print(f"DO State: {do_state}")
+    assert do_state.pump_vac is False
+    assert do_state.pump_water is False
+
+    enbio_wifi_machine.set_relay(Relay.VacuumPump, RelayState.Auto)
+
+
+def test_enbio_device_do_state_pumps_water(enbio_wifi_machine):
+    enbio_wifi_machine.set_relay(Relay.WaterPump, RelayState.On)
+    time.sleep(0.25)
+
+    do_state = enbio_wifi_machine.get_do_state()
+    print(f"DO State: {do_state}")
+    assert do_state.pump_vac is False
+    assert do_state.pump_water is True
+
+    enbio_wifi_machine.set_relay(Relay.WaterPump, RelayState.Off)
+
+    do_state = enbio_wifi_machine.get_do_state()
+    print(f"DO State: {do_state}")
+    assert do_state.pump_vac is False
+    assert do_state.pump_water is False
+
+    enbio_wifi_machine.set_relay(Relay.WaterPump, RelayState.Auto)
+

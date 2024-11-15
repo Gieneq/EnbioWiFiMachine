@@ -1,12 +1,13 @@
+import threading
 import time
 import struct
 import minimalmodbus
 import serial.tools.list_ports
 from datetime import datetime
 # from .proc_runner import ProcRunner
-from .common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, float_to_ints, \
-    ints_to_float, cfg, process_type_values, ScreenId, ScaleFactors, ScaleFactor, Relay, RelayState, ValveState
-from .modbus_registers import ModbusRegister
+from enbio_wifi_machine.common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, float_to_ints, \
+    ints_to_float, cfg, process_type_values, ScreenId, ScaleFactors, ScaleFactor, Relay, RelayState, ValveState, DOState
+from enbio_wifi_machine.modbus_registers import ModbusRegister
 
 
 class EnbioWiFiMachine:
@@ -29,6 +30,12 @@ class EnbioWiFiMachine:
         self._device.serial.stopbits = 1
         self._device.serial.parity = minimalmodbus.serial.PARITY_EVEN
         self._device.serial.timeout = cfg["serial_timeout"]
+
+    def write_int_register(self, register: int, value: int):
+        self._device.write_register(register, value)
+
+    def read_int_register(self, register: int) -> int:
+        return self._device.read_register(register)
 
     def _read_float_register(self, register):
         low, high = self._device.read_registers(register, 2)
@@ -287,13 +294,12 @@ class EnbioWiFiMachine:
         if self._device.read_register(ModbusRegister.PROC_STATUS.value) == 1:
             print("interrupt")
             self._device.write_register(ModbusRegister.PROC_SELECT_START.value, 0xFFFF)
+            # Soe time to show summary
             time.sleep(3)
+            self._write_reg_feedback(ModbusRegister.CHANGE_SCREEN.value, ScreenId.MAIN.value, await_time=0.1)
 
-            self._device.write_register(ModbusRegister.CHANGE_SCREEN.value, ScreenId.MAIN.value)
-            for _ in range(0, 50):
-                print(f"screen {self._device.read_register(ModbusRegister.CHANGE_SCREEN.value)}")
-                time.sleep(0.5)
-            # self._write_reg_feedback(ModbusRegister.CHANGE_SCREEN.value, ScreenId.MAIN.value, await_time=1)
+    def get_do_state(self) -> DOState:
+        return DOState.from_bitfields(self._device.read_register(ModbusRegister.PROC_DO_STATE.value))
 
     def poll_process_line(self) -> ProcessLine:
         valves_and_relays = self._device.read_register(ModbusRegister.VALVES_AND_RELAYS.value)
@@ -409,6 +415,8 @@ class EnbioWiFiMachine:
     def get_pressure(self, sensor: str) -> float:
         if sensor == "process":
             return self._read_float_register(ModbusRegister.PRESSURE_PROCESS.value)
+        if sensor == "relative":
+            return self._read_float_register(ModbusRegister.PRESSURE_RELATIVE.value)
         if sensor == "external":
             return self._read_float_register(ModbusRegister.ATMOSPHERIC_PRESSURE.value)
         raise ValueError("Bad 'sensor' argument")
@@ -425,6 +433,19 @@ class EnbioWiFiMachine:
         raise ValueError("Bad 'sensor' argument")
 
     def get_raw_temperature(self, sensor: str) -> float:
+        if sensor == "pressure":
+            return self._read_float_register(ModbusRegister.ADCF_PRESS_PROCESS.value)
+        if sensor == "process":
+            return self._read_float_register(ModbusRegister.ADCF_TMPR_PROCESS.value)
+        if sensor == "chamber":
+            return self._read_float_register(ModbusRegister.ADCF_TMPR_CHAMBER.value)
+        if sensor == "steamgen":
+            return self._read_float_register(ModbusRegister.ADCF_TMPR_STEAMGE.value)
+        raise ValueError("Bad 'sensor' argument")
+
+    def get_raw_sensor_value(self, sensor: str) -> float:
+        if sensor == "pressure":
+            return self._read_float_register(ModbusRegister.ADCF_PRESS_PROCESS.value)
         if sensor == "process":
             return self._read_float_register(ModbusRegister.ADCF_TMPR_PROCESS.value)
         if sensor == "chamber":
@@ -464,8 +485,75 @@ class EnbioWiFiMachine:
         return self._device.read_register(ModbusRegister.PROC_PHASE.value)
 
 
-# if __name__ == '__main__':
-#     enbio_device = EnbioDevice()
+def thread_procedure(procedure: str, test_machine: EnbioWiFiMachine, lock: threading.Lock):
+    if procedure == "door":
+        while True:
+            with lock:
+                if test_machine.is_door_unlocked():
+                    test_machine.door_lock_with_feedback()
+                else:
+                    test_machine.door_unlock_with_feedback()
+            time.sleep(0.01)
+
+    elif procedure == "valves":
+        valves_list = [[Relay.Valve1, True], [Relay.Valve2, False], [Relay.Valve3, True], [Relay.Valve5, False]]
+        while True:
+            with lock:
+                for idx, valve_state in enumerate(valves_list):
+                    valve, state = valve_state
+                    test_machine.set_valve(valve, ValveState.Open if state else ValveState.Closed)
+                    valves_list[idx] = [valve, not state]
+            time.sleep(0.1)
+
+    elif procedure == "wtr":
+        wtr_state = True
+        while True:
+            with lock:
+                test_machine.set_relay(Relay.WaterPump, RelayState.On if wtr_state else RelayState.Off)
+                wtr_state = not wtr_state
+            time.sleep(0.33)
+
+    elif procedure == "vac":
+        wtr_state = True
+        while True:
+            with lock:
+                test_machine.set_relay(Relay.VacuumPump, RelayState.On if wtr_state else RelayState.Off)
+                wtr_state = not wtr_state
+            time.sleep(0.6)
+
+
+def start_lol_threads(test_machine: EnbioWiFiMachine):
+    """ Dont ask why """
+    lock = threading.Lock()
+
+    procedures = ["door", "valves", "wtr", "vac"]
+
+    threads: list[threading.Thread] = []
+
+    for procedure in procedures:
+        thread = threading.Thread(target=thread_procedure, args=(procedure, test_machine, lock))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    print("lol done")
+
+
+if __name__ == '__main__':
+    machine = EnbioWiFiMachine()
+    start_lol_threads(machine)
+
+    # machine.write_int_register(ModbusRegister.PUMP_WTR_INTERVAL.value, 300)
+    # print(f"Water pump: {machine.read_int_register(ModbusRegister.PUMP_WTR_ON_TIME.value)}/"
+    #       f"{machine.read_int_register(ModbusRegister.PUMP_WTR_INTERVAL.value)}")
+    #
+    # machine.write_int_register(ModbusRegister.PUMP_WTR_ON_TIME.value, 22)
+    #
+    # time.sleep(4)
+    # machine.write_int_register(ModbusRegister.PUMP_WTR_ON_TIME.value, 0)
+
 #
 #     enbio_device.set_standby_cooling_thrsh_tmpr(20)
 

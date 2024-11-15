@@ -60,6 +60,41 @@ class ProcessType(Enum):
     THELIX = 6
 
 
+@dataclass
+class DOState:
+    proc_type: None | ProcessType
+    sg_heaters_double: bool
+    ch_heaters: bool
+    pump_vac: bool
+    pump_water: bool
+    v1_open: bool
+    v2_open: bool
+    v3_open: bool
+    v5_open: bool
+    sg_heater_single: bool
+
+    @staticmethod
+    def from_bitfields(raw_value: int) -> "DOState":
+        try:
+            proc_type = ProcessType((raw_value >> 12) & 0xF000)
+        except Exception:
+            proc_type = None
+
+        do_state = DOState(
+            proc_type=proc_type,
+            sg_heaters_double=raw_value & (1 << 0) > 0,
+            ch_heaters=raw_value & (1 << 1) > 0,
+            pump_vac=raw_value & (1 << 2) > 0,
+            pump_water=raw_value & (1 << 3) > 0,
+            v1_open=raw_value & (1 << 4) > 0,
+            v2_open=raw_value & (1 << 5) > 0,
+            v3_open=raw_value & (1 << 6) > 0,
+            v5_open=raw_value & (1 << 7) > 0,
+            sg_heater_single=raw_value & (1 << 8) > 0,
+        )
+        return do_state
+
+
 class Relay(Enum):
     SteamgenDouble = 0
     Chamber = 1
