@@ -455,3 +455,30 @@ def test_enbio_device_do_state_pumps_water(enbio_wifi_machine):
 
     enbio_wifi_machine.set_relay(Relay.WaterPump, RelayState.Auto)
 
+
+def test_poll_procline(enbio_wifi_machine):
+    procline = enbio_wifi_machine.poll_process_line()
+    print(procline)
+
+
+def test_backlight(enbio_wifi_machine):
+    brightness_values = [0, 1, 2, 3, 55, 99, 75]
+
+    for brightness_value in brightness_values:
+        enbio_wifi_machine.set_backlight(brightness_value)
+        time.sleep(0.5)
+        assert enbio_wifi_machine.get_backlight() == brightness_value
+
+
+def test_enbio_device_do_state_process(enbio_wifi_machine):
+    enbio_wifi_machine.start_process(ProcessType.P121)
+    time.sleep(5)
+
+    do_state = enbio_wifi_machine.get_do_state()
+
+    enbio_wifi_machine.interrupt_process()
+    # Delay some time to let device release lock
+    time.sleep(1)
+
+    assert do_state.proc_type == ProcessType.P121
+

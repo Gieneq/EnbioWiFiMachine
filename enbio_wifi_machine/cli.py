@@ -50,7 +50,8 @@ def initialize_parser():
 
 
 def main():
-    args = initialize_parser().parse_args()
+    parser = initialize_parser()
+    args = parser.parse_args()
 
     # Initialize the ModbusTool instance
     try:
@@ -131,7 +132,7 @@ def main():
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
-    elif args.command == "runmonitor":
+    elif args.command == "run":
         print(f"Run {args.procname}")
         try:
             tool.runmonitor(args.procname)

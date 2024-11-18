@@ -109,6 +109,19 @@ DO State consist of [Process ID](###Process ID) currently executed and bit field
 | TVAC       | 6     |
 | THELIX     | 5     |
 
+### Heating patterns
+
+In PWR pattern value bit0=1 menas forced.
+
+| Pattern             | Value     |
+|---------------------|-----------|
+| NONE                | 0         |
+| CONST_CH2_SG1       | 1<<2 = 4  |
+| VARONTIME_CH2_SG1   | 2<<2 = 8  |
+| VARONTIME_SG3       | 3<<2 = 12 |
+| VARONTIME_ADAPTIVE  | 4<<2 = 16 |
+| VARINTERVAL_CH2_SG1 | 5<<2 = 20 |
+
 ### Process or Test Phase
 
 | Process Phase ID           | Value |
@@ -136,7 +149,6 @@ DO State consist of [Process ID](###Process ID) currently executed and bit field
 | Equalizing           | 4     |
 | Ending               | 5     |
 
-asdasd
 
 | Enums Label                   | Register | Legacy      | R/W | Tested | Description                                                                                          |
 |-------------------------------|----------|-------------|-----|--------|------------------------------------------------------------------------------------------------------|
@@ -160,7 +172,7 @@ asdasd
 | `SEND_REPORT_ENABLE`          | 130u     | ✅ Coherent  | -/- |        | TODO                                                                                                 |
 | `RESET_ONE_YEAR_COUNTER`      | 239u     | ✅ Coherent  | -/- |        | TODO                                                                                                 |
 | `CLEAR_ERR_HISTORY`           | 152u     | ✅ Coherent  | -/- |        | TODO                                                                                                 |
-| `PROC_DO_STATE`               | 7u       | ✅ Coherent  | R/- |        | Read DO State                                                                                        |
+| `PROC_DO_STATE`               | 7u       | ✅ Coherent  | R/- | y      | Read DO State                                                                                        |
 | `DATETIME_GET_YEAR`           | 1512u    | ✅ Coherent  | R/- | y      | Read only year value 2000-2099                                                                       |
 | `DATETIME_GET_MONTH`          | 1513u    | ✅ Coherent  | R/- | y      | Read only month value: 1-12                                                                          |
 | `DATETIME_GET_DAY`            | 1514u    | ✅ Coherent  | R/- | y      | Read only day value: 1-31                                                                            |
@@ -208,13 +220,13 @@ asdasd
 | `TEST_FLOAT`                  | 3490f    | ❌ New       | R/W | y      | Test read write of float                                                                             |
 | `TEST_INT`                    | 3492u    | ❌ New       | R/W | y      | Test read write of int                                                                               |
 | `STM_REBOOT`                  | 3499u    | ❌ New       | -/W | y      | Restart system                                                                                       |
-| `PWR_CTRL_PATTERN`            | 0        | ?           | -/- |        | xxxx                                                                                                 |
-| `PWR_CH_CTRL`                 | 0        | ?           | -/- |        | xxxx                                                                                                 |
-| `PWR_CH_DRV_MONITOR`          | 0        | ?           | -/- |        | xxxx                                                                                                 |
-| `PWR_CH_TARGET`               | 0        | ?           | -/- |        | xxxx                                                                                                 |
-| `PWR_SG_CTRL`                 | 0        | ?           | -/- |        | xxxx                                                                                                 |
-| `PWR_SG_TARGET`               | 0        | ?           | -/- |        | xxxx                                                                                                 |
-| `PWR_SG_DRV_MONITOR`          | 0        | ?           | -/- |        | xxxx                                                                                                 |
+| `PWR_CTRL_PATTERN`            | 3493u    | ❌ New       | R/- | y      | Get recently used heating pattern                                                                    |
+| `PWR_CH_CTRL`                 | 3494u    | ❌ New       | R/- | y      | 2 if chamber target temperature forced else 0                                                        |
+| `PWR_CH_DRV_MONITOR`          | 3504u    | ❌ New       | R/- | y      | PI ctrl output signal, means percentage power deliverd to chamber heater.                            |
+| `PWR_CH_TARGET`               | 0        | ❌ New       | R/- | y      | During PI controlled target value in *C of chamber                                                   |
+| `PWR_SG_CTRL`                 | 3496u    | ❌ New       | R/- | y      | 2 if steamgen target temperature forced else 0                                                       |
+| `PWR_SG_TARGET`               | 0        | ❌ New       | R/- | y      | During PI controlled target value in *C of stramgen                                                  |
+| `PWR_SG_DRV_MONITOR`          | 3505u    | ❌ New       | R/- | y      | PI ctrl output signal, means percentage power deliverd to elected config of steamgen heaters.        |
 | `PUMP_WTR_INTERVAL`           | 3506u    | ❌ New       | R/W | y      | Alternative to use 'relay', this uses timer. Value in ms.                                            |
 | `PUMP_WTR_ON_TIME`            | 3507u    | ❌ New       | R/W | y      | Alternative to use 'relay', this uses timer. Value in ms.                                            |
 | `CHANGE_SCREEN`               | 3550u    | ❌ New       | R/W | y      | Change screenn, not all transitions supported                                                        |

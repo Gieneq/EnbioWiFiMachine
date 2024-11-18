@@ -76,7 +76,9 @@ class DOState:
     @staticmethod
     def from_bitfields(raw_value: int) -> "DOState":
         try:
-            proc_type = ProcessType((raw_value >> 12) & 0xF000)
+            proc_value = (raw_value & 0xF000) >> 12
+            print(f"proc_value: {proc_value}, raw_value: {raw_value}")
+            proc_type = ProcessType(proc_value)
         except Exception:
             proc_type = None
 
@@ -153,33 +155,30 @@ class EnbioDeviceInternalException(Exception):
 
 
 @dataclass
-class ProcessLine:
-    sec: int
-    phase: int
-
+class PWRState:
     ptrn: int
     ch_pwr: float
     ch_tar: float
     sg_pwr: float
     sg_tar: float
 
+
+@dataclass
+class SensorsMeasurements:
     p_proc: float
     t_proc: float
     t_chmbr: float
     t_stmgn: float
 
-    v1: bool
-    v2: bool
-    v3: bool
-    v5: bool
 
-    pvac: bool
-    pwtr: bool
+@dataclass
+class ProcessLine:
+    sec: int
+    phase: int
 
-    ch_ab: bool
-    sg_a: bool
-    sg_b: bool
-    sg_c: bool
+    pwr_state: PWRState
+    do_state: DOState
+    sensors_msrs: SensorsMeasurements
 
 
 @dataclass

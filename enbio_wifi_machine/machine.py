@@ -5,8 +5,10 @@ import minimalmodbus
 import serial.tools.list_ports
 from datetime import datetime
 # from .proc_runner import ProcRunner
-from enbio_wifi_machine.common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, float_to_ints, \
-    ints_to_float, cfg, process_type_values, ScreenId, ScaleFactors, ScaleFactor, Relay, RelayState, ValveState, DOState
+from enbio_wifi_machine.common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, \
+    float_to_ints, \
+    ints_to_float, cfg, process_type_values, ScreenId, ScaleFactors, ScaleFactor, Relay, RelayState, ValveState, \
+    DOState, PWRState, SensorsMeasurements
 from enbio_wifi_machine.modbus_registers import ModbusRegister
 
 
@@ -301,36 +303,32 @@ class EnbioWiFiMachine:
     def get_do_state(self) -> DOState:
         return DOState.from_bitfields(self._device.read_register(ModbusRegister.PROC_DO_STATE.value))
 
-    def poll_process_line(self) -> ProcessLine:
-        valves_and_relays = self._device.read_register(ModbusRegister.VALVES_AND_RELAYS.value)
-
-        return ProcessLine(
-            sec=self._device.read_register(ModbusRegister.PROC_SECONDS.value),
-            phase=self._device.read_register(ModbusRegister.PROC_PHASE.value),
-
+    def get_pwr_state(self) -> PWRState:
+        return PWRState(
             ptrn=self._device.read_register(ModbusRegister.PWR_CTRL_PATTERN.value),
+
             ch_pwr=self._device.read_register(ModbusRegister.PWR_CH_DRV_MONITOR.value),
             ch_tar=self._device.read_register(ModbusRegister.PWR_CH_TARGET.value),
-            sg_pwr=self._device.read_register(ModbusRegister.PWR_SG_CTRL.value),
-            sg_tar=self._device.read_register(ModbusRegister.PWR_SG_DRV_MONITOR.value),
+            sg_pwr=self._device.read_register(ModbusRegister.PWR_SG_DRV_MONITOR.value),
+            sg_tar=self._device.read_register(ModbusRegister.PWR_SG_TARGET.value),
+        )
 
+    def get_sensors_measurements(self) -> SensorsMeasurements:
+        return SensorsMeasurements(
             p_proc=round(self._read_float_register(ModbusRegister.PRESSURE_PROCESS.value), 3),
             t_proc=round(self._read_float_register(ModbusRegister.TEMPERATURE_PROCESS.value), 3),
             t_chmbr=round(self._read_float_register(ModbusRegister.TEMPERATURE_CHAMBER.value), 3),
             t_stmgn=round(self._read_float_register(ModbusRegister.TEMPERATURE_STEAMGEN.value), 3),
+        )
 
-            v1=valves_and_relays & (1 << 0) > 0,
-            v2=valves_and_relays & (1 << 1) > 0,
-            v3=valves_and_relays & (1 << 2) > 0,
-            v5=valves_and_relays & (1 << 3) > 0,
+    def poll_process_line(self) -> ProcessLine:
+        return ProcessLine(
+            sec=self._device.read_register(ModbusRegister.PROC_SECONDS.value),
+            phase=self.get_phase_id(),
 
-            pvac=valves_and_relays & (1 << 4) > 0,
-            pwtr=valves_and_relays & (1 << 5) > 0,
-
-            ch_ab=valves_and_relays & (1 << 6) > 0,
-            sg_a=valves_and_relays & (1 << 7) > 0,
-            sg_b=valves_and_relays & (1 << 8) > 0,
-            sg_c=valves_and_relays & (1 << 9) > 0,
+            pwr_state=self.get_pwr_state(),
+            do_state=self.get_do_state(),
+            sensors_msrs=self.get_sensors_measurements(),
         )
 
     def get_scale_factors(self) -> ScaleFactors:
@@ -455,34 +453,34 @@ class EnbioWiFiMachine:
         raise ValueError("Bad 'sensor' argument")
 
     def runmonitor(self, proces_name: str) -> None:
-        pass
-        # proc_runner = ProcRunner(self._device)
-        # proc_runner.start(label_to_process_type.get(proces_name))
-        #
-        # try:
-        #     while True:
-        #         time.sleep(1)
-        #         print(proc_runner.poll_progress())
-        # except KeyboardInterrupt as e:
-        #     print("Interrupting...")
-        #     proc_runner.interrupt()
-        #     raise e
+        self.start_process(label_to_process_type.get(proces_name))
+
+        try:
+            while True:
+                time.sleep(1)
+                print(self.poll_process_line())
+        except KeyboardInterrupt as e:
+            print("Interrupting...")
+            self.interrupt_process()
+            raise e
 
     def monitor(self) -> None:
-        pass
-        # proc_runner = ProcRunner(self._device)
-        #
-        # try:
-        #     while True:
-        #         time.sleep(1)
-        #         print(proc_runner.poll_progress())
-        # except KeyboardInterrupt as e:
-        #     print("Stopping...")
-        #     raise e
-
+        try:
+            while True:
+                time.sleep(1)
+                print(self.poll_process_line())
+        except KeyboardInterrupt as e:
+            print("Stopping...")
+            raise e
 
     def get_phase_id(self) -> int:
         return self._device.read_register(ModbusRegister.PROC_PHASE.value)
+
+    def set_backlight(self, brightness_perc: int):
+        self._device.write_register(ModbusRegister.BACKLIGHT.value, brightness_perc)
+
+    def get_backlight(self) -> int:
+        return self._device.read_register(ModbusRegister.BACKLIGHT.value)
 
 
 def thread_procedure(procedure: str, test_machine: EnbioWiFiMachine, lock: threading.Lock):
