@@ -1,16 +1,14 @@
 import threading
 import time
-import struct
 import minimalmodbus
 import serial.tools.list_ports
 from datetime import datetime
-# from .proc_runner import ProcRunner
+from enbio_wifi_machine.live_plotter import LivePlotter
 from enbio_wifi_machine.common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, \
     float_to_ints, \
     ints_to_float, cfg, process_type_values, ScreenId, ScaleFactors, ScaleFactor, Relay, RelayState, ValveState, \
     DOState, PWRState, SensorsMeasurements
 from enbio_wifi_machine.modbus_registers import ModbusRegister
-
 
 class EnbioWiFiMachine:
     """ Abstraction of Enbio WiFi machine via USB Serial Modbus RTU protocol """
@@ -454,21 +452,36 @@ class EnbioWiFiMachine:
 
     def runmonitor(self, proces_name: str) -> None:
         self.start_process(label_to_process_type.get(proces_name))
+        plotter = LivePlotter()
+
+        proctime = 0.0
 
         try:
             while True:
-                time.sleep(1)
-                print(self.poll_process_line())
+                time.sleep(0.25)
+                proctime += 0.25
+                pline = self.poll_process_line()
+                pline.sec += proctime
+                plotter.add_data(pline)
+                plotter.update_plot()
+                print(pline)
         except KeyboardInterrupt as e:
             print("Interrupting...")
             self.interrupt_process()
             raise e
 
     def monitor(self) -> None:
+        plotter = LivePlotter()
+        monitor_time = 0
         try:
             while True:
                 time.sleep(1)
-                print(self.poll_process_line())
+                monitor_time += 1
+                pline = self.poll_process_line()
+                pline.sec = monitor_time
+                plotter.add_data(pline)
+                plotter.update_plot()
+                print(pline)
         except KeyboardInterrupt as e:
             print("Stopping...")
             raise e
@@ -481,6 +494,9 @@ class EnbioWiFiMachine:
 
     def get_backlight(self) -> int:
         return self._device.read_register(ModbusRegister.BACKLIGHT.value)
+
+    def reset_parameters_with_target(self, target_us: bool = True):
+        self._device.write_register(ModbusRegister.USE_DEFAULT_MODBUS_PARAMS.value, 2 if target_us else 1)
 
 
 def thread_procedure(procedure: str, test_machine: EnbioWiFiMachine, lock: threading.Lock):

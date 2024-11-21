@@ -97,4 +97,6 @@ class ModbusRegister(Enum):
     CHANGE_SCREEN = 3550
     TEMPERATURE_EXTERNAL = 3510
 
+    USE_DEFAULT_MODBUS_PARAMS = 3551
+
     #TODO add memory monitoring registers

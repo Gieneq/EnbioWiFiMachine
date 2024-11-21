@@ -15,6 +15,9 @@ def initialize_parser():
     # Subcommand for getting device ID
     _ = subparsers.add_parser("devidget", help="Get the current device name.")
 
+    set_presets = subparsers.add_parser("setpresets", help=f"Set presets 'us' or 'eu'")
+    set_presets.add_argument("-t", "--target", choices=["us", "eu"], type=str, required=True, help="Target region.")
+
     # Subcommand for saving all
     _ = subparsers.add_parser("saveall", help="Save all current settings to persistent storage.")
 
@@ -62,12 +65,17 @@ def main():
     if args.command == "devidset":
         try:
             tool.set_device_id(args.devid)
-            print(f"Device ID set to: {args.name} success")
+            print(f"Device ID set to: {args.devid} success")
         except EnbioDeviceInternalException as e:
-            print(f"Device ID set to: {args.name} failed : {e}")
+            print(f"Device ID set to: {args.devid} failed : {e}")
 
     elif args.command == "devidget":
         print(tool.get_device_id())
+
+    elif args.command == "setpresets":
+        print(f"Setting presets for {args.target}")
+        should_target_us = args.target == "us"
+        tool.reset_parameters_with_target(should_target_us)
 
     elif args.command == "saveall":
         try:

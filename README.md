@@ -231,7 +231,7 @@ In PWR pattern value bit0=1 menas forced.
 | `PUMP_WTR_ON_TIME`            | 3507u    | ❌ New       | R/W | y      | Alternative to use 'relay', this uses timer. Value in ms.                                            |
 | `CHANGE_SCREEN`               | 3550u    | ❌ New       | R/W | y      | Change screenn, not all transitions supported                                                        |
 | `TEMPERATURE_EXTERNAL`        | 3510f    | ❌ New       | R/- | y      | Get external (PCB) temperature. Can be 40-80*C easly.                                                |
-| `xx`                          | 0        | ?           | -/- |        | xxxx                                                                                                 |
+| `USE_DEFAULT_MODBUS_PARAMS`   | 3551u    | ❌ New       | -/W |        | Value 1 - set EU params, Value > 1 set US params. Should not change device name.                     |
 | `xx`                          | 0        | ?           | -/- |        | xxxx                                                                                                 |
 | `xx`                          | 0        | ?           | -/- |        | xxxx                                                                                                 |
 | `xx`                          | 0        | ?           | -/- |        | xxxx                                                                                                 |

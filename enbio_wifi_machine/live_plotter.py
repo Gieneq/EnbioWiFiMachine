@@ -1,81 +1,92 @@
-# import time
-# import minimalmodbus
-# import serial.tools.list_ports
-# from enum import Enum
-# from datetime import datetime
-# from .common import ProcessType, ProcessLine, read_float_register, process_type_values, \
-#     EnbioDeviceInternalException
-#
-# from .modbus_registers import ModbusRegister
-#
-#
-# class ProcRunner:
-#     def __init__(self, device: minimalmodbus.Instrument):
-#         self._device = device
-#         self.selected_process = None
-#
-#     # todo use Machine's functions
-#     def _write_ctrl_reg_feedback(self, register, await_time: float = 0.1):
-#         activating_value = 1
-#         success_value = 0
-#         print(f"_write_ctrl_reg_feedback {register} -> {activating_value}")
-#         self._device.write_register(register, activating_value)
-#         time.sleep(await_time)
-#
-#         feedback_value = self._device.read_register(register)
-#         print(f"_write_ctrl_reg_feedback {register} <- {feedback_value}")
-#
-#         # Check if the value is as expected
-#         if feedback_value != success_value:
-#             raise EnbioDeviceInternalException(
-#                 f"Error: Expected value {activating_value}, but got {feedback_value}")
-#
-#     def start(self, process_type: ProcessType) -> None:
-#         if self._device.read_register(ModbusRegister.PROC_STATUS.value) == 1:
-#             raise EnbioDeviceInternalException("Process already running")
-#
-#         print("Start")
-#         self.selected_process = process_type
-#
-#         self._device.write_register(ModbusRegister.PROC_SELECT_START.value, process_type_values[process_type])
-#         time.sleep(0.1)
-#         self._write_ctrl_reg_feedback(ModbusRegister.PROC_SELECT_START.value)
-#
-#     def interrupt(self) -> None:
-#         if self._device.read_register(ModbusRegister.PROC_STATUS.value) == 1:
-#             print("interrupt")
-#             self.selected_process = None
-#             self._device.write_register(ModbusRegister.PROC_SELECT_START.value, 0xFFFF)
-#
-#     def poll_progress(self) -> ProcessLine:
-#         valves_and_relays = self._device.read_register(ModbusRegister.VALVES_AND_RELAYS.value)
-#
-#         # todo move to Machine
-#         return ProcessLine(
-#             sec=self._device.read_register(ModbusRegister.PROC_SECONDS.value),
-#             phase=self._device.read_register(ModbusRegister.PROC_PHASE.value),
-#
-#             ptrn=self._device.read_register(ModbusRegister.PWR_CTRL_PATTERN.value),
-#             ch_pwr=self._device.read_register(ModbusRegister.PWR_CH_DRV_MONITOR.value),
-#             ch_tar=self._device.read_register(ModbusRegister.PWR_CH_TARGET.value),
-#             sg_pwr=self._device.read_register(ModbusRegister.PWR_SG_CTRL.value),
-#             sg_tar=self._device.read_register(ModbusRegister.PWR_SG_DRV_MONITOR.value),
-#
-#             p_proc=round(read_float_register(self._device, ModbusRegister.PRESSURE_PROCESS.value), 3),
-#             t_proc=round(read_float_register(self._device, ModbusRegister.TEMPERATURE_PROCESS.value), 3),
-#             t_chmbr=round(read_float_register(self._device, ModbusRegister.TEMPERATURE_CHAMBER.value), 3),
-#             t_stmgn=round(read_float_register(self._device, ModbusRegister.TEMPERATURE_STEAMGEN.value), 3),
-#
-#             v1=valves_and_relays & (1 << 0) > 0,
-#             v2=valves_and_relays & (1 << 1) > 0,
-#             v3=valves_and_relays & (1 << 2) > 0,
-#             v5=valves_and_relays & (1 << 3) > 0,
-#
-#             pvac=valves_and_relays & (1 << 4) > 0,
-#             pwtr=valves_and_relays & (1 << 5) > 0,
-#
-#             ch_ab=valves_and_relays & (1 << 6) > 0,
-#             sg_a=valves_and_relays & (1 << 7) > 0,
-#             sg_b=valves_and_relays & (1 << 8) > 0,
-#             sg_c=valves_and_relays & (1 << 9) > 0,
-#         )
+import matplotlib.pyplot as plt
+from collections import deque
+from enbio_wifi_machine.common import ProcessLine
+
+
+# Define deque to store live data
+class LivePlotter:
+    def __init__(self, buffer_size=1000):
+        self.sec_data = deque(maxlen=buffer_size)
+        self.p_proc_data = deque(maxlen=buffer_size)
+        self.t_proc_data = deque(maxlen=buffer_size)
+        self.t_chmbr_data = deque(maxlen=buffer_size)
+        self.t_stmgn_data = deque(maxlen=buffer_size)
+        self.ch_heaters_states = deque(maxlen=buffer_size)
+        self.sg_heaters_double_states = deque(maxlen=buffer_size)
+        self.sg_heater_single_states = deque(maxlen=buffer_size)
+
+        plt.ion()
+        self.fig, self.ax1 = plt.subplots()
+        self.line_t_proc, = self.ax1.plot([], [], label="t_proc", color="blue")
+        self.line_t_chmbr, = self.ax1.plot([], [], label="t_chmbr", color="green")
+        self.line_t_stmgn, = self.ax1.plot([], [], label="t_stmgn", color="orange")
+        self.ax1.set_title("Live Sensor Measurements")
+        self.ax1.set_xlabel("Time (sec)")
+        self.ax1.set_ylabel("Temperature (°C)")
+        self.ax1.legend(loc="upper left")
+        self.ax1.grid()
+        self.ax2 = self.ax1.twinx()
+        self.line_p_proc, = self.ax2.plot([], [], label="p_proc", color="red")
+        self.ax2.set_ylabel("p_proc")
+        self.ax2.tick_params(axis="y", labelcolor="red")
+        self.ax2.legend(loc="upper right")
+
+    def update_plot(self):
+        self.ax1.clear()  # Clear the primary axis to redraw everything
+        self.ax2.clear()  # Clear the secondary axis to redraw everything
+
+        # Plot temperature and pressure data
+        self.ax1.plot(self.sec_data, self.t_proc_data, label="t_proc", color="blue")
+        self.ax1.plot(self.sec_data, self.t_chmbr_data, label="t_chmbr", color="green")
+        self.ax1.plot(self.sec_data, self.t_stmgn_data, label="t_stmgn", color="orange")
+        self.ax2.plot(self.sec_data, self.p_proc_data, label="p_proc", color="red")
+
+        # Set labels and legends for both axes
+        self.ax1.set_title("Live Sensor Measurements")
+        self.ax1.set_xlabel("Time (sec)")
+        self.ax1.set_ylabel("Temperature (°C)")
+        self.ax1.legend(loc="upper left")
+        self.ax1.grid()
+        self.ax2.set_ylabel("p_proc")
+        self.ax2.tick_params(axis="y", labelcolor="red")
+        self.ax2.legend(loc="upper right")
+
+        # Add filled backgrounds for heater states
+        for i in range(1, len(self.sec_data)):  # Iterate through time intervals
+            start_time = self.sec_data[i - 1]
+            end_time = self.sec_data[i]
+
+            # Draw filled regions for heater states
+            if self.ch_heaters_states[i] and (self.sg_heaters_double_states[i] or self.sg_heater_single_states[i]):
+                self.ax1.axvspan(start_time, end_time, color="red", alpha=0.8, label="both ch and sg - bad")
+            else:
+                if self.ch_heaters_states[i]:
+                    self.ax1.axvspan(start_time, end_time, color="green", alpha=0.1, label="ch_heaters ON")
+                if self.sg_heaters_double_states[i]:
+                    self.ax1.axvspan(start_time, end_time, color="orange", alpha=0.4, label="sg_heaters_double ON")
+                if self.sg_heater_single_states[i]:
+                    self.ax1.axvspan(start_time, end_time, color="orange", alpha=0.2, label="sg_heater_single ON")
+
+
+        # Rescale axes dynamically
+        self.ax1.relim()
+        self.ax1.autoscale_view()
+        self.ax2.relim()
+        self.ax2.autoscale_view()
+
+        # Redraw the plot
+        plt.draw()
+        plt.pause(0.01)
+
+    def add_data(self, process_line: ProcessLine):
+        sensors = process_line.sensors_msrs
+        do_state = process_line.do_state
+
+        self.sec_data.append(process_line.sec)
+        self.p_proc_data.append(sensors.p_proc)
+        self.t_proc_data.append(sensors.t_proc)
+        self.t_chmbr_data.append(sensors.t_chmbr)
+        self.t_stmgn_data.append(sensors.t_stmgn)
+        self.ch_heaters_states.append(do_state.ch_heaters)
+        self.sg_heaters_double_states.append(do_state.sg_heaters_double)
+        self.sg_heater_single_states.append(do_state.sg_heater_single)

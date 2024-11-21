@@ -7,6 +7,7 @@ setup(
     install_requires=[
         'minimalmodbus~=2.1.1',
         'pyserial~=3.5',
+        'matplotlib==3.9.2'
     ],
     entry_points={
         "console_scripts": [

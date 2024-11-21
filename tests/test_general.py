@@ -439,7 +439,7 @@ def test_enbio_device_do_state_pumps_vacuum(enbio_wifi_machine):
 
 def test_enbio_device_do_state_pumps_water(enbio_wifi_machine):
     enbio_wifi_machine.set_relay(Relay.WaterPump, RelayState.On)
-    time.sleep(0.25)
+    time.sleep(2.25)
 
     do_state = enbio_wifi_machine.get_do_state()
     print(f"DO State: {do_state}")
@@ -482,3 +482,15 @@ def test_enbio_device_do_state_process(enbio_wifi_machine):
 
     assert do_state.proc_type == ProcessType.P121
 
+
+def test_enbio_defice_restore_defaults(enbio_wifi_machine):
+    device_id = enbio_wifi_machine.get_device_id()
+    scales = enbio_wifi_machine.get_scale_factors()
+
+    enbio_wifi_machine.reset_parameters_with_target(target_us=True)
+
+    device_id_after_reset = enbio_wifi_machine.get_device_id()
+    scales_after_reset = enbio_wifi_machine.get_scale_factors()
+
+    assert device_id == device_id_after_reset
+    assert scales.equals(scales_after_reset)
