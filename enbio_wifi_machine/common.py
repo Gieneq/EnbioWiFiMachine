@@ -75,12 +75,8 @@ class DOState:
 
     @staticmethod
     def from_bitfields(raw_value: int) -> "DOState":
-        try:
-            proc_value = (raw_value & 0xF000) >> 12
-            print(f"proc_value: {proc_value}, raw_value: {raw_value}")
-            proc_type = ProcessType(proc_value)
-        except Exception:
-            proc_type = None
+        proc_value = (raw_value & 0xF000) >> 12
+        proc_type = get_process_type_by_value(proc_value)
 
         do_state = DOState(
             proc_type=proc_type,
@@ -146,6 +142,12 @@ process_type_values = {
     ProcessType.TVAC: 6,
     ProcessType.THELIX: 5,
 }
+
+reverse_process_type_values = {value: key for key, value in process_type_values.items()}
+
+
+def get_process_type_by_value(value):
+    return reverse_process_type_values.get(value, None)
 
 
 class EnbioDeviceInternalException(Exception):

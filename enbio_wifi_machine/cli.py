@@ -41,6 +41,10 @@ def initialize_parser():
         choices=process_labels,
         help=f"Run one of {process_labels}"
     )
+    runparser.add_argument("-p", "--plotting", default=False, type=bool,
+                           help="Should print plot. Warning will slow down")
+    runparser.add_argument("-i", "--interval", default=1.0, type=float, help="Interval of sampling in sec")
+    runparser.add_argument("-l", "--label", default="PA", type=str, help="Label to mark measurements")
 
     _ = subparsers.add_parser("monitor", help="todo.")
 
@@ -143,7 +147,7 @@ def main():
     elif args.command == "run":
         print(f"Run {args.procname}")
         try:
-            tool.runmonitor(args.procname)
+            tool.runmonitor(args.procname, args.plotting, args.interval, args.label)
         except KeyboardInterrupt:
             print("Interrupted")
         except EnbioDeviceInternalException as e:

@@ -5,7 +5,7 @@ from enbio_wifi_machine.common import ProcessLine
 
 # Define deque to store live data
 class LivePlotter:
-    def __init__(self, buffer_size=1000):
+    def __init__(self, buffer_size=250):
         self.sec_data = deque(maxlen=buffer_size)
         self.p_proc_data = deque(maxlen=buffer_size)
         self.t_proc_data = deque(maxlen=buffer_size)

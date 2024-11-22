@@ -455,13 +455,11 @@ class EnbioWiFiMachine:
             return self._read_float_register(ModbusRegister.ADCF_TMPR_STEAMGE.value)
         raise ValueError("Bad 'sensor' argument")
 
-    def runmonitor(self, proces_name: str) -> None:
+    def runmonitor(self, proces_name: str, plotting: bool = False, interval: float = 1.0, identifier: str = "PA") -> None:
         self.start_process(label_to_process_type.get(proces_name))
-        plotter = LivePlotter()
+        plotter = LivePlotter() if plotting else None
 
         dirname = "measurements"
-        identifier = "PA"
-        interval = 0.5
         os.makedirs(dirname, exist_ok=True)
 
         start_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -495,7 +493,6 @@ class EnbioWiFiMachine:
                                 "SgPWR %",
                                 ])
 
-
             proctime = 0.0
 
             try:
@@ -507,8 +504,9 @@ class EnbioWiFiMachine:
                     # prevent plot dropping after finish
                     if pline.do_state.proc_type is not None:
                         pline.sec = proctime
-                        plotter.add_data(pline)
-                        plotter.update_plot()
+                        if plotter is not None:
+                            plotter.add_data(pline)
+                            plotter.update_plot()
 
                         csvwriter.writerow([proctime,
                                             pline.sensors_msrs.p_proc,
