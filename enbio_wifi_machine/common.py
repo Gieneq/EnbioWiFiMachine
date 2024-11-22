@@ -166,9 +166,11 @@ class PWRState:
 @dataclass
 class SensorsMeasurements:
     p_proc: float
+    p_ext: float
     t_proc: float
     t_chmbr: float
     t_stmgn: float
+    t_ext: float
 
 
 @dataclass

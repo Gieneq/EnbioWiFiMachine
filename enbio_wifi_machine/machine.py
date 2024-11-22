@@ -1,3 +1,5 @@
+import csv
+import os
 import threading
 import time
 import minimalmodbus
@@ -9,6 +11,7 @@ from enbio_wifi_machine.common import ProcessType, label_to_process_type, Proces
     ints_to_float, cfg, process_type_values, ScreenId, ScaleFactors, ScaleFactor, Relay, RelayState, ValveState, \
     DOState, PWRState, SensorsMeasurements
 from enbio_wifi_machine.modbus_registers import ModbusRegister
+
 
 class EnbioWiFiMachine:
     """ Abstraction of Enbio WiFi machine via USB Serial Modbus RTU protocol """
@@ -313,10 +316,12 @@ class EnbioWiFiMachine:
 
     def get_sensors_measurements(self) -> SensorsMeasurements:
         return SensorsMeasurements(
-            p_proc=round(self._read_float_register(ModbusRegister.PRESSURE_PROCESS.value), 3),
-            t_proc=round(self._read_float_register(ModbusRegister.TEMPERATURE_PROCESS.value), 3),
-            t_chmbr=round(self._read_float_register(ModbusRegister.TEMPERATURE_CHAMBER.value), 3),
-            t_stmgn=round(self._read_float_register(ModbusRegister.TEMPERATURE_STEAMGEN.value), 3),
+            p_proc=self._read_float_register(ModbusRegister.PRESSURE_PROCESS.value),
+            p_ext=self._read_float_register(ModbusRegister.ATMOSPHERIC_PRESSURE.value),
+            t_proc=self._read_float_register(ModbusRegister.TEMPERATURE_PROCESS.value),
+            t_chmbr=self._read_float_register(ModbusRegister.TEMPERATURE_CHAMBER.value),
+            t_stmgn=self._read_float_register(ModbusRegister.TEMPERATURE_STEAMGEN.value),
+            t_ext=self._read_float_register(ModbusRegister.TEMPERATURE_EXTERNAL.value),
         )
 
     def poll_process_line(self) -> ProcessLine:
@@ -454,21 +459,87 @@ class EnbioWiFiMachine:
         self.start_process(label_to_process_type.get(proces_name))
         plotter = LivePlotter()
 
-        proctime = 0.0
+        dirname = "measurements"
+        identifier = "PA"
+        os.makedirs(dirname, exist_ok=True)
 
-        try:
-            while True:
-                time.sleep(0.25)
-                proctime += 0.25
-                pline = self.poll_process_line()
-                pline.sec += proctime
-                plotter.add_data(pline)
-                plotter.update_plot()
-                print(pline)
-        except KeyboardInterrupt as e:
-            print("Interrupting...")
-            self.interrupt_process()
-            raise e
+        start_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filepath = os.path.join(dirname, f"meas_{proces_name}_id_{identifier}_fmt_v1_{start_time}.csv")
+        
+        with open(filepath, mode='w', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerow(["Time (sec)",
+                                "ProcPress (bar)",
+                                "ExtPress (bar)",
+                                "ProcTempr *C",
+                                "ChmbrTempr *C",
+                                "SGTempr *C",
+                                "ExtTmpr *C",
+
+                                "ProcType",
+                                "V1",
+                                "V2",
+                                "V3",
+                                "V5",
+                                "Vacuum",
+                                "Water",
+                                "ChHeat",
+                                "ShdHeat",
+                                "SgsHeat",
+
+                                "ChTar *C",
+                                "ChPWR %",
+                                "SgTar *C",
+                                "SgPWR %",
+                                ])
+
+            deltatime = 1/16
+
+            proctime = 0.0
+
+            try:
+                while True:
+                    time.sleep(deltatime)
+                    proctime += deltatime
+                    pline = self.poll_process_line()
+
+                    csvwriter.writerow([proctime,
+                                        pline.sensors_msrs.p_proc,
+                                        pline.sensors_msrs.p_ext,
+                                        pline.sensors_msrs.t_proc,
+                                        pline.sensors_msrs.t_chmbr,
+                                        pline.sensors_msrs.t_stmgn,
+                                        pline.sensors_msrs.t_ext,
+
+                                        pline.do_state.proc_type.value if pline.do_state.proc_type is not None else 0,
+
+                                        pline.do_state.v1_open,
+                                        pline.do_state.v2_open,
+                                        pline.do_state.v3_open,
+                                        pline.do_state.v5_open,
+                                        pline.do_state.pump_vac,
+                                        pline.do_state.pump_water,
+                                        pline.do_state.ch_heaters,
+                                        pline.do_state.sg_heaters_double,
+                                        pline.do_state.sg_heater_single,
+
+                                        pline.pwr_state.ch_tar,
+                                        pline.pwr_state.ch_pwr,
+                                        pline.pwr_state.sg_tar,
+                                        pline.pwr_state.sg_pwr,
+                                        ])
+                    csvfile.flush()
+
+                    # prevent plot dropping after finish
+                    if pline.do_state.proc_type is not None:
+                        pline.sec = proctime
+                        plotter.add_data(pline)
+                        plotter.update_plot()
+                    print(pline)
+            except KeyboardInterrupt as e:
+                print("Interrupting...")
+                self.interrupt_process()
+                raise e
 
     def monitor(self) -> None:
         plotter = LivePlotter()

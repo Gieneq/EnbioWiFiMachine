@@ -27,9 +27,14 @@ pip install -e .
 ```
 
 ### 4. Check Installation
-Verify the installation by running the CLI tool’s help command:
+Verify the installation by running the CLI tool’s help command from venv
 ```shell
 enbio_wifi_machine --help
+```
+
+Verify the installation by running the CLI tool’s help command from outside
+```shell
+python -m enbio_wifi_machine/cli.py --help
 ```
 
 ## CLI
