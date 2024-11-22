@@ -461,10 +461,12 @@ class EnbioWiFiMachine:
 
         dirname = "measurements"
         identifier = "PA"
+        interval = 0.5
         os.makedirs(dirname, exist_ok=True)
 
         start_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filepath = os.path.join(dirname, f"meas_{proces_name}_id_{identifier}_fmt_v1_{start_time}.csv")
+        filepath = os.path.join(dirname, f"meas_{proces_name}_int_{round(interval*1000)}_id_{identifier}"
+                                         f"_fmt_v1_{start_time}.csv")
         
         with open(filepath, mode='w', newline='') as csvfile:
             csvwriter = csv.writer(csvfile)
@@ -493,49 +495,59 @@ class EnbioWiFiMachine:
                                 "SgPWR %",
                                 ])
 
-            deltatime = 1/16
 
             proctime = 0.0
 
             try:
                 while True:
-                    time.sleep(deltatime)
-                    proctime += deltatime
+                    start_time = time.time()
+
                     pline = self.poll_process_line()
-
-                    csvwriter.writerow([proctime,
-                                        pline.sensors_msrs.p_proc,
-                                        pline.sensors_msrs.p_ext,
-                                        pline.sensors_msrs.t_proc,
-                                        pline.sensors_msrs.t_chmbr,
-                                        pline.sensors_msrs.t_stmgn,
-                                        pline.sensors_msrs.t_ext,
-
-                                        pline.do_state.proc_type.value if pline.do_state.proc_type is not None else 0,
-
-                                        pline.do_state.v1_open,
-                                        pline.do_state.v2_open,
-                                        pline.do_state.v3_open,
-                                        pline.do_state.v5_open,
-                                        pline.do_state.pump_vac,
-                                        pline.do_state.pump_water,
-                                        pline.do_state.ch_heaters,
-                                        pline.do_state.sg_heaters_double,
-                                        pline.do_state.sg_heater_single,
-
-                                        pline.pwr_state.ch_tar,
-                                        pline.pwr_state.ch_pwr,
-                                        pline.pwr_state.sg_tar,
-                                        pline.pwr_state.sg_pwr,
-                                        ])
-                    csvfile.flush()
 
                     # prevent plot dropping after finish
                     if pline.do_state.proc_type is not None:
                         pline.sec = proctime
                         plotter.add_data(pline)
                         plotter.update_plot()
-                    print(pline)
+
+                        csvwriter.writerow([proctime,
+                                            pline.sensors_msrs.p_proc,
+                                            pline.sensors_msrs.p_ext,
+                                            pline.sensors_msrs.t_proc,
+                                            pline.sensors_msrs.t_chmbr,
+                                            pline.sensors_msrs.t_stmgn,
+                                            pline.sensors_msrs.t_ext,
+
+                                            pline.do_state.proc_type.value if pline.do_state.proc_type is not None else 0,
+
+                                            pline.do_state.v1_open,
+                                            pline.do_state.v2_open,
+                                            pline.do_state.v3_open,
+                                            pline.do_state.v5_open,
+                                            pline.do_state.pump_vac,
+                                            pline.do_state.pump_water,
+                                            pline.do_state.ch_heaters,
+                                            pline.do_state.sg_heaters_double,
+                                            pline.do_state.sg_heater_single,
+
+                                            pline.pwr_state.ch_tar,
+                                            pline.pwr_state.ch_pwr,
+                                            pline.pwr_state.sg_tar,
+                                            pline.pwr_state.sg_pwr,
+                                            ])
+                        csvfile.flush()
+
+                    # Measure execution time and calculate sleep time
+                    exec_time = time.time() - start_time  # Time taken for execution
+                    sleep_time = max(0, interval - exec_time)  # Ensure sleep_time is not negative
+                    time.sleep(sleep_time)  # Sleep for the remaining time to maintain interval
+                    if exec_time > interval:
+                        print(f"Warning execution time:{exec_time}, sleep time: {sleep_time} exceeded interval: {interval}")
+
+                    # Update the process time counter
+                    proctime += interval
+
+                    # print(pline)
             except KeyboardInterrupt as e:
                 print("Interrupting...")
                 self.interrupt_process()
