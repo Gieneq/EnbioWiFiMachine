@@ -53,6 +53,8 @@ def initialize_parser():
     scales_get_parser.add_argument("action", choices=["get", "set"], help="Action to perform: 'get' or 'set'")
     scales_get_parser.add_argument("-f", "--filepath", type=str, required=True, help="File path for scales data.")
 
+    _ = subparsers.add_parser("htoglcheck", help="todo.")
+
     return parser
 
 
@@ -179,6 +181,9 @@ def main():
                 tool.set_scale_factors(scales_to_be_saved)
             print(f"Saving to FLASH")
             tool.save_all()
+
+    elif args.command == "htoglcheck":
+        print(tool.get_heater_toggle_cnts())
 
     else:
         parser.print_help()

@@ -99,4 +99,8 @@ class ModbusRegister(Enum):
 
     USE_DEFAULT_MODBUS_PARAMS = 3551
 
+    HEATERS_TOGGLE_MSR_SG_AB = 3560
+    HEATERS_TOGGLE_MSR_CH_AB = 3561
+    HEATERS_TOGGLE_MSR_SG_C = 3562
+
     #TODO add memory monitoring registers

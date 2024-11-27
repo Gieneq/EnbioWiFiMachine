@@ -5,11 +5,11 @@ import time
 import minimalmodbus
 import serial.tools.list_ports
 from datetime import datetime
-from enbio_wifi_machine.live_plotter import LivePlotter
+from enbio_wifi_machine.plotter import LivePlotter
 from enbio_wifi_machine.common import ProcessType, label_to_process_type, ProcessLine, EnbioDeviceInternalException, \
     float_to_ints, \
     ints_to_float, cfg, process_type_values, ScreenId, ScaleFactors, ScaleFactor, Relay, RelayState, ValveState, \
-    DOState, PWRState, SensorsMeasurements
+    DOState, PWRState, SensorsMeasurements, HeatersToggleCounts
 from enbio_wifi_machine.modbus_registers import ModbusRegister
 
 
@@ -454,6 +454,23 @@ class EnbioWiFiMachine:
         if sensor == "steamgen":
             return self._read_float_register(ModbusRegister.ADCF_TMPR_STEAMGE.value)
         raise ValueError("Bad 'sensor' argument")
+
+    def get_heater_toggle_cnts(self) -> HeatersToggleCounts:
+        return HeatersToggleCounts(
+            sg_ab=self.read_int_register(ModbusRegister.HEATERS_TOGGLE_MSR_SG_AB.value),
+            ch_ab=self.read_int_register(ModbusRegister.HEATERS_TOGGLE_MSR_CH_AB.value),
+            sg_c=self.read_int_register(ModbusRegister.HEATERS_TOGGLE_MSR_SG_C.value),
+        )
+
+    def set_heater_toggle_cnts(self, cnts: HeatersToggleCounts):
+        if cnts.sg_ab is not None:
+            self.write_int_register(ModbusRegister.HEATERS_TOGGLE_MSR_SG_AB.value, cnts.sg_ab)
+
+        if cnts.ch_ab is not None:
+            self.write_int_register(ModbusRegister.HEATERS_TOGGLE_MSR_CH_AB.value, cnts.ch_ab)
+
+        if cnts.sg_c is not None:
+            self.write_int_register(ModbusRegister.HEATERS_TOGGLE_MSR_SG_C.value, cnts.sg_c)
 
     def runmonitor(self, proces_name: str, plotting: bool = False, interval: float = 1.0, identifier: str = "PA") -> None:
         self.start_process(label_to_process_type.get(proces_name))

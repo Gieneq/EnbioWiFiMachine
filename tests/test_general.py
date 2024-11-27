@@ -5,7 +5,7 @@ import pytest
 import re
 from enbio_wifi_machine.machine import EnbioWiFiMachine
 from enbio_wifi_machine.common import EnbioDeviceInternalException, await_value, float_to_ints, ints_to_float, \
-    ProcessType, ScreenId, ScaleFactors, ScaleFactor, ValveState, RelayState, Relay
+    ProcessType, ScreenId, ScaleFactors, ScaleFactor, ValveState, RelayState, Relay, HeatersToggleCounts
 
 epsilon = 1e-4
 minimal_reboot_time_sec = 11
@@ -494,3 +494,25 @@ def test_enbio_defice_restore_defaults(enbio_wifi_machine):
 
     assert device_id == device_id_after_reset
     assert scales.equals(scales_after_reset)
+
+
+def test_enbio_device_heaters_toggle_counters(enbio_wifi_machine):
+    print(enbio_wifi_machine.get_heater_toggle_cnts())
+
+    cnts_to_set = HeatersToggleCounts(
+        sg_ab=120,
+        ch_ab=10,
+        sg_c=3330,
+    )
+    enbio_wifi_machine.set_heater_toggle_cnts(cnts_to_set)
+    after_set = enbio_wifi_machine.get_heater_toggle_cnts()
+
+    cnts_to_clear = HeatersToggleCounts(
+        sg_ab=0,
+        ch_ab=0,
+        sg_c=0,
+    )
+    enbio_wifi_machine.set_heater_toggle_cnts(cnts_to_clear)
+
+    assert after_set == cnts_to_set
+

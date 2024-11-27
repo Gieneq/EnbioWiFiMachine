@@ -230,3 +230,10 @@ class ScaleFactors:
                 self.temperature_chamber.equals(other.temperature_chamber, precision) and
                 self.temperature_steamgen.equals(other.temperature_steamgen, precision)
         )
+
+
+@dataclass
+class HeatersToggleCounts:
+    sg_ab: int | None
+    ch_ab: int | None
+    sg_c: int | None
